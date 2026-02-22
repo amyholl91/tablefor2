@@ -1,0 +1,1453 @@
+<!--
+  Table for 2 — Restaurant Tracker
+  Version: 14
+  Last updated: 2026-02-22
+
+  What's new in v13:
+  - Websites filled in for all restaurants that have them
+  - "Who Recommended It?" renamed to "Who Were You With?"
+  - New Occasion field added to form and detail view
+
+  What's new in v14:
+  - "Who Were You With?" placeholder simplified to just "Just us"
+  - Website link moved up to sit alongside Cuisine and Location in detail view
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Table for 2</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green-deep: #1a3a2a;
+  --green-mid: #2d6a4f;
+  --green-light: #52b788;
+  --green-pale: #d8f3dc;
+  --green-wash: #f0faf2;
+  --cream: #faf9f6;
+  --white: #ffffff;
+  --text-dark: #1a2820;
+  --text-mid: #4a5e54;
+  --text-light: #8aa898;
+  --border: #d4e8d8;
+  --gold: #f9a825;
+  --shadow: 0 4px 24px rgba(26,58,42,0.10);
+  --shadow-lg: 0 8px 40px rgba(26,58,42,0.16);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text-dark); min-height: 100vh; }
+
+/* HEADER */
+header { background: var(--green-deep); padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 68px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 16px rgba(0,0,0,0.18); }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--white); }
+.logo span { color: var(--green-light); font-style: italic; }
+.header-actions { display: flex; gap: 0.75rem; align-items: center; }
+
+/* BUTTONS */
+.btn { border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 500; border-radius: 8px; padding: 0.5rem 1.1rem; transition: all 0.18s; }
+.btn-primary { background: var(--green-light); color: var(--white); }
+.btn-primary:hover { background: #3da872; transform: translateY(-1px); }
+.btn-datenight { background: linear-gradient(135deg, #e91e8c, #c2185b); color: white; }
+.btn-datenight:hover { background: linear-gradient(135deg, #c2185b, #880e4f); transform: translateY(-1px); }
+.btn-cancel { background: var(--green-wash); color: var(--text-mid); border: 1px solid var(--border); }
+.btn-cancel:hover { background: var(--border); }
+.btn-save { background: var(--green-mid); color: var(--white); }
+.btn-save:hover { background: var(--green-deep); }
+.btn-danger { background: #fce4ec; color: #c62828; border: none; }
+.btn-danger:hover { background: #f8bbd0; }
+
+/* NAV TABS */
+.nav-tabs { background: var(--white); border-bottom: 1px solid var(--border); display: flex; padding: 0 2rem; }
+.nav-tab { padding: 0.9rem 1.4rem; font-size: 0.875rem; font-weight: 500; color: var(--text-mid); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.18s; background: none; border-top: none; border-left: none; border-right: none; font-family: 'DM Sans', sans-serif; }
+.nav-tab.active { color: var(--green-mid); border-bottom-color: var(--green-mid); }
+.nav-tab:hover:not(.active) { color: var(--green-light); }
+
+/* MAIN */
+main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+/* STATS */
+.stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+.stat-card { background: var(--white); border-radius: 12px; padding: 1.1rem 1.25rem; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 0.25rem; }
+.stat-number { font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--green-mid); }
+.stat-label { font-size: 0.8rem; color: var(--text-light); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* FILTER BAR */
+.filter-bar { background: var(--white); border-radius: 12px; padding: 1rem 1.25rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; box-shadow: var(--shadow); margin-bottom: 0.75rem; }
+.filter-bar select, .filter-bar input { border: 1px solid var(--border); border-radius: 8px; padding: 0.45rem 0.85rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; color: var(--text-dark); background: var(--green-wash); outline: none; transition: border 0.15s; }
+.filter-bar select:focus, .filter-bar input:focus { border-color: var(--green-light); }
+.filter-bar input { min-width: 180px; }
+.filter-label { font-size: 0.8rem; color: var(--text-light); font-weight: 500; }
+
+/* SORT BAR */
+.sort-bar { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.sort-bar label { font-size: 0.8rem; color: var(--text-light); font-weight: 500; }
+.sort-bar select { border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem 0.75rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; background: var(--white); color: var(--text-dark); outline: none; }
+
+/* GRID */
+.restaurants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem; }
+.restaurant-card { background: var(--white); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; position: relative; border: 2px solid transparent; }
+.restaurant-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+.restaurant-card.is-favorite { border-color: #ffca28; box-shadow: 0 0 0 1px #ffca28, 0 4px 20px rgba(255,202,40,0.5), 0 8px 32px rgba(255,152,0,0.3); }
+.restaurant-card.is-favorite:hover { transform: translateY(-3px); box-shadow: 0 0 0 1px #ffca28, 0 6px 28px rgba(255,202,40,0.65), 0 14px 44px rgba(255,152,0,0.4); }
+
+.card-image-placeholder { width: 100%; padding: 0.55rem 1rem; background: var(--green-wash); display: flex; align-items: center; gap: 0.5rem; font-size: 1.3rem; border-bottom: 1px solid var(--border); }
+.card-image-placeholder span { font-size: 0.78rem; color: var(--text-light); }
+
+
+.card-status-badge { position: absolute; top: 10px; right: 10px; padding: 0.3rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+
+.badge-want { background: var(--green-pale); color: var(--green-mid); }
+.badge-visited { background: var(--green-mid); color: var(--white); }
+
+.card-body { padding: 1rem 1.1rem 1.1rem; }
+.card-name { font-family: 'Playfair Display', serif; font-size: 1.15rem; margin-bottom: 0.25rem; }
+.card-meta { font-size: 0.8rem; color: var(--text-light); display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.card-rating { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.35rem; }
+.rating-amazing  { background: #f3e5f5; color: #6a1b9a; }
+.rating-verygood { background: #e8f5e9; color: #2e7d32; }
+.rating-good     { background: #e3f2fd; color: #1565c0; }
+.rating-okay     { background: #fff8e1; color: #e65100; }
+.rating-bad      { background: #fce4ec; color: #c62828; }
+.card-visited-date { font-size: 0.72rem; color: var(--text-light); margin-top: 0.25rem; }
+.card-notes { font-size: 0.83rem; color: var(--text-mid); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 0.35rem; }
+.card-heart-btn { position: absolute; bottom: 10px; right: 12px; background: none; border: none; font-size: 1.25rem; cursor: pointer; padding: 0.25rem; line-height: 1; transition: transform 0.2s; z-index: 2; }
+.card-heart-btn:hover { transform: scale(1.3); }
+
+/* EMPTY STATE */
+.empty-state { grid-column: 1/-1; text-align: center; padding: 4rem 2rem; color: var(--text-light); }
+.empty-state .big-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+.empty-state h3 { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--text-mid); margin-bottom: 0.5rem; }
+
+/* MAP VIEW */
+#map-view, #fav-view { display: none; }
+#map-container { border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); height: 500px; background: var(--green-wash); }
+#map-container iframe { width: 100%; height: 100%; border: none; border-radius: 14px; }
+.map-legend { background: var(--white); border-radius: 12px; padding: 1rem 1.25rem; box-shadow: var(--shadow); margin-top: 1rem; display: flex; gap: 1.5rem; align-items: center; }
+.legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--text-mid); }
+.legend-dot { width: 14px; height: 14px; border-radius: 50%; }
+.dot-want { background: var(--green-light); }
+.dot-visited { background: var(--green-deep); }
+.map-list { margin-top: 1.25rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem; }
+.map-list-item { background: var(--white); border-radius: 10px; padding: 0.85rem 1rem; box-shadow: var(--shadow); display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: transform 0.15s; }
+.map-list-item:hover { transform: translateX(3px); }
+.map-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.map-item-name { font-weight: 500; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-item-sub { font-size: 0.75rem; color: var(--text-light); }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(26,58,42,0.45); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--white); border-radius: 18px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); animation: slideUp 0.25s ease; }
+@keyframes slideUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-header { padding: 1.5rem 1.5rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; display: flex; align-items: center; gap: 0.5rem; }
+.modal-close { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: none; cursor: pointer; font-size: 1rem; color: var(--text-light); display: flex; align-items: center; justify-content: center; transition: background 0.15s; flex-shrink: 0; }
+.modal-close:hover { background: var(--green-wash); }
+.modal-body { padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+.modal-footer { padding: 1rem 1.5rem 1.5rem; display: flex; gap: 0.75rem; justify-content: flex-end; border-top: 1px solid var(--border); }
+
+/* FORM */
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+.form-group label { font-size: 0.8rem; font-weight: 500; color: var(--text-mid); text-transform: uppercase; letter-spacing: 0.05em; }
+.form-group input, .form-group select, .form-group textarea { border: 1.5px solid var(--border); border-radius: 8px; padding: 0.6rem 0.85rem; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--text-dark); background: var(--green-wash); outline: none; transition: border 0.15s; width: 100%; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--green-light); background: var(--white); }
+.form-group textarea { resize: vertical; min-height: 80px; }
+
+/* TOGGLES */
+.status-toggle { display: flex; gap: 0.5rem; }
+.status-btn { flex: 1; padding: 0.6rem; border-radius: 8px; border: 1.5px solid var(--border); background: var(--green-wash); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.18s; color: var(--text-mid); }
+.status-btn.active-want { background: var(--green-pale); border-color: var(--green-light); color: var(--green-mid); }
+.status-btn.active-visited { background: var(--green-mid); border-color: var(--green-mid); color: var(--white); }
+
+.rating-toggle { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.rating-btn { flex: 1; min-width: calc(33% - 0.4rem); padding: 0.5rem 0.4rem; border-radius: 8px; border: 1.5px solid var(--border); background: var(--green-wash); font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.18s; color: var(--text-mid); text-align: center; }
+.rating-btn[data-rating="Amazing"].selected   { background: #f3e5f5; border-color: #9c27b0; color: #6a1b9a; }
+.rating-btn[data-rating="Very Good"].selected { background: #e8f5e9; border-color: #4caf50; color: #2e7d32; }
+.rating-btn[data-rating="Good"].selected      { background: #e3f2fd; border-color: #1e88e5; color: #1565c0; }
+.rating-btn[data-rating="Okay"].selected      { background: #fff8e1; border-color: #ff9800; color: #e65100; }
+.rating-btn[data-rating="Bad"].selected       { background: #fce4ec; border-color: #e91e63; color: #c62828; }
+
+/* FAVORITE TOGGLE */
+.fav-toggle-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.85rem; border: 1.5px solid var(--border); border-radius: 8px; background: var(--green-wash); cursor: pointer; transition: all 0.18s; user-select: none; }
+.fav-toggle-row:hover { border-color: var(--gold); background: #fffde7; }
+.fav-toggle-row.active { border-color: var(--gold); background: #fffde7; }
+
+
+/* PHOTO */
+.photo-upload { border: 2px dashed var(--border); border-radius: 10px; padding: 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; color: var(--text-light); font-size: 0.875rem; }
+.photo-upload:hover { border-color: var(--green-light); background: var(--green-wash); }
+.photo-upload input { display: none; }
+.photo-preview { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+.photo-thumb { width: 70px; height: 70px; border-radius: 8px; object-fit: cover; border: 2px solid var(--border); cursor: pointer; }
+
+/* VIEW MODAL */
+.view-photos { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.view-photos img { height: 120px; border-radius: 10px; object-fit: cover; }
+.detail-row { display: flex; gap: 1.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+.detail-item { display: flex; flex-direction: column; gap: 0.2rem; }
+.d-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light); font-weight: 500; }
+.d-value { font-size: 0.95rem; color: var(--text-dark); font-weight: 500; }
+.detail-notes { margin-top: 0.75rem; font-size: 0.9rem; color: var(--text-mid); line-height: 1.6; }
+.copy-btn { background: var(--green-wash); border: 1px solid var(--border); border-radius: 6px; padding: 0.2rem 0.55rem; font-size: 0.72rem; cursor: pointer; color: var(--text-mid); font-family: 'DM Sans', sans-serif; margin-left: 0.4rem; transition: background 0.15s; }
+.copy-btn:hover { background: var(--green-pale); }
+
+/* AUTOCOMPLETE */
+.ac-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1.5px solid var(--green-light); border-top: none; border-radius: 0 0 10px 10px; box-shadow: var(--shadow-lg); z-index: 999; max-height: 260px; overflow-y: auto; }
+.ac-item { padding: 0.65rem 1rem; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.12s; }
+.ac-item:last-child { border-bottom: none; }
+.ac-item:hover, .ac-item.highlighted { background: var(--green-wash); }
+.ac-name { font-weight: 500; font-size: 0.9rem; color: var(--text-dark); }
+.ac-sub { font-size: 0.78rem; color: var(--text-light); margin-top: 1px; }
+.ac-loading { padding: 0.75rem 1rem; font-size: 0.85rem; color: var(--text-light); text-align: center; }
+
+/* DATE NIGHT */
+.datenight-result { background: linear-gradient(135deg, #fff0f6, #fce4ec); border: 2px solid #f48fb1; border-radius: 14px; padding: 1.25rem 1.5rem; text-align: center; animation: slideUp 0.3s ease; cursor: pointer; }
+.dn-emoji { font-size: 2.5rem; margin-bottom: 0.5rem; }
+.dn-name { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--text-dark); margin-bottom: 0.4rem; }
+.dn-meta { font-size: 0.85rem; color: var(--text-mid); }
+
+/* CONFETTI */
+.confetti-piece { position: fixed; width: 10px; height: 10px; top: -10px; border-radius: 2px; animation: confettiFall linear forwards; z-index: 9999; pointer-events: none; }
+@keyframes confettiFall { to { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+
+@media (max-width: 700px) {
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .form-row { grid-template-columns: 1fr; }
+  header { padding: 0 1rem; }
+  main { padding: 1rem; }
+  .logo { font-size: 1.3rem; }
+}
+
+  /* MULTI-LOCATION */
+  .loc-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+  .loc-tab { padding: 0.55rem 1rem; font-size: 0.82rem; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; font-family: 'DM Sans', sans-serif; color: var(--text-light); transition: all 0.15s; }
+  .loc-tab.active { color: var(--green-mid); border-bottom-color: var(--green-mid); }
+  .loc-tab:hover:not(.active) { color: var(--green-light); }
+  .loc-panel { display: none; }
+  .loc-panel.active { display: block; }
+  .loc-entry { background: var(--green-wash); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; position: relative; }
+  .loc-entry-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light); font-weight: 600; margin-bottom: 0.5rem; }
+  .btn-add-loc { background: var(--green-wash); border: 1.5px dashed var(--border); border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.85rem; cursor: pointer; color: var(--text-mid); font-family: 'DM Sans', sans-serif; width: 100%; transition: all 0.15s; }
+  .btn-add-loc:hover { border-color: var(--green-light); color: var(--green-mid); background: var(--green-pale); }
+  .btn-remove-loc { position: absolute; top: 0.5rem; right: 0.5rem; background: none; border: none; cursor: pointer; font-size: 0.85rem; color: var(--text-light); padding: 0.2rem 0.4rem; border-radius: 4px; }
+  .btn-remove-loc:hover { background: #fce4ec; color: #c62828; }
+  .multi-loc-badge { display: inline-block; background: var(--green-pale); color: var(--green-mid); font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 10px; margin-left: 0.4rem; vertical-align: middle; }
+
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Table <span>for 2</span></div>
+  <div class="header-actions">
+    <button class="btn btn-datenight" onclick="openDateNight()">🌹 Date Night</button>
+    <button class="btn btn-primary" onclick="openAddModal()">＋ Add Restaurant</button>
+  </div>
+</header>
+
+<div class="nav-tabs">
+  <button class="nav-tab active" id="tab-grid" onclick="switchView('grid',this)">🍽 All Restaurants</button>
+  <button class="nav-tab" id="tab-fav" onclick="switchView('fav',this)">❤️ Favorites</button>
+  <button class="nav-tab" id="tab-map" onclick="switchView('map',this)">🗺 Map View</button>
+</div>
+
+<main>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-number" id="stat-total">0</div><div class="stat-label">Total Saved</div></div>
+    <div class="stat-card"><div class="stat-number" id="stat-visited">0</div><div class="stat-label">Visited</div></div>
+    <div class="stat-card"><div class="stat-number" id="stat-want">0</div><div class="stat-label">Want to Try</div></div>
+    <div class="stat-card"><div class="stat-number" id="stat-must">0</div><div class="stat-label">Amazing</div></div>
+    <div class="stat-card"><div class="stat-number" id="stat-cuisine" style="font-size:1rem;padding-top:0.4rem;">—</div><div class="stat-label">Top Cuisine</div></div>
+  </div>
+
+  <div class="filter-bar">
+    <span class="filter-label">Filter:</span>
+    <input type="text" id="search-input" placeholder="Search by name…" oninput="renderAll()">
+    <select id="filter-status" onchange="renderAll()">
+      <option value="">All statuses</option>
+      <option value="Want to Try">Want to Try</option>
+      <option value="Visited">Visited</option>
+    </select>
+    <select id="filter-cuisine" onchange="renderAll()"><option value="">All cuisines</option></select>
+    <select id="filter-location" onchange="renderAll()"><option value="">All states</option></select>
+    <select id="filter-price" onchange="renderAll()">
+      <option value="">Any price</option>
+      <option value="$">$</option><option value="$$">$$</option><option value="$$$">$$$</option>
+    </select>
+    <select id="filter-rating" onchange="renderAll()">
+      <option value="">Any rating</option>
+      <option value="Amazing">🤩 Amazing</option>
+      <option value="Very Good">😍 Very Good</option>
+      <option value="Good">👍 Good</option>
+      <option value="Okay">😐 Okay</option>
+      <option value="Bad">👎 Bad</option>
+    </select>
+    <select id="filter-fav" onchange="renderAll()">
+      <option value="">All</option>
+      <option value="fav">❤️ Favorites only</option>
+    </select>
+  </div>
+
+  <div class="sort-bar">
+    <label>Sort:</label>
+    <select id="sort-select" onchange="renderAll()">
+      <option value="date-desc">Newest first</option>
+      <option value="date-asc">Oldest first</option>
+      <option value="name-asc">Name A–Z</option>
+      <option value="name-desc">Name Z–A</option>
+      <option value="rating">Rating</option>
+      <option value="price-asc">Price low–high</option>
+      <option value="price-desc">Price high–low</option>
+      <option value="cuisine">Cuisine A–Z</option>
+    </select>
+  </div>
+
+  <div id="grid-view">
+    <div class="restaurants-grid" id="grid-container"></div>
+  </div>
+
+  <div id="fav-view">
+    <div class="restaurants-grid" id="fav-container"></div>
+  </div>
+
+  <div id="map-view">
+    <div id="map-container">
+      <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-light);gap:0.5rem;">
+        <div style="font-size:2.5rem">🗺</div>
+        <div style="font-weight:500;color:var(--text-mid);">Click Map View to load</div>
+      </div>
+    </div>
+    <div class="map-legend">
+      <strong style="font-size:0.875rem;color:var(--text-mid);">Legend:</strong>
+      <div class="legend-item"><div class="legend-dot dot-want"></div> Want to Try</div>
+      <div class="legend-item"><div class="legend-dot dot-visited"></div> Visited</div>
+    </div>
+    <div class="map-list" id="map-list"></div>
+  </div>
+</main>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="add-modal-title">Add Restaurant</div>
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="position:relative;">
+        <label>Restaurant Name *</label>
+        <input type="text" id="f-name" placeholder="Start typing a name…" autocomplete="off" oninput="onNameInput(this.value)">
+        <div class="ac-dropdown" id="ac-dropdown"></div>
+      </div>
+      <div class="form-group">
+        <label>Cuisine Type</label>
+        <input type="text" id="f-cuisine" placeholder="e.g. Italian, Thai…">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Price Range</label>
+          <select id="f-price">
+            <option value="">— select —</option>
+            <option value="$">$ Budget-friendly</option>
+            <option value="$$">$$ Moderate</option>
+            <option value="$$$">$$$ Splurge</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Locations <span style="font-size:0.75rem;color:var(--text-light);text-transform:none;font-weight:400;">(add one or more)</span></label>
+        <div id="locations-container"></div>
+        <button class="btn-add-loc" type="button" onclick="addLocationField()">＋ Add Location</button>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <div class="status-toggle">
+          <button class="status-btn active-want" data-status="Want to Try" onclick="selectStatus(this)">🌿 Want to Try</button>
+          <button class="status-btn" data-status="Visited" onclick="selectStatus(this)">✅ Visited</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Favorite?</label>
+        <div class="fav-toggle-row" id="fav-toggle-row" onclick="toggleFavForm()">
+          <span id="fav-toggle-heart" style="font-size:1.3rem;">🤍</span>
+          <span id="fav-toggle-label" style="font-size:0.9rem;font-weight:500;color:var(--text-mid);">Mark as a favorite spot</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date Visited</label>
+          <input type="date" id="f-date">
+        </div>
+        <div class="form-group">
+          <label>Who Were You With?</label>
+          <input type="text" id="f-recommended" placeholder="Just us">
+        </div>
+        <div class="form-group">
+          <label>Occasion</label>
+          <input type="text" id="f-occasion" placeholder="Date night, anniversary, birthday…">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Favorite Dish Ordered</label>
+          <input type="text" id="f-dish" placeholder="e.g. Truffle pasta…">
+        </div>
+        <div class="form-group">
+          <label>Website / Google Maps Link</label>
+          <input type="url" id="f-website" placeholder="https://…">
+        </div>
+      </div>
+      <div class="form-group" id="rating-group">
+        <label>Rating</label>
+        <div class="rating-toggle">
+          <button class="rating-btn" data-rating="Amazing" onclick="selectRating(this)">🤩 Amazing</button>
+          <button class="rating-btn" data-rating="Very Good" onclick="selectRating(this)">😍 Very Good</button>
+          <button class="rating-btn" data-rating="Good" onclick="selectRating(this)">👍 Good</button>
+          <button class="rating-btn" data-rating="Okay" onclick="selectRating(this)">😐 Okay</button>
+          <button class="rating-btn" data-rating="Bad" onclick="selectRating(this)">👎 Bad</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="f-notes" placeholder="What did you love? Ambiance, service, must-order dishes…"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Food Photos</label>
+        <div class="photo-upload" onclick="document.getElementById('photo-input').click()">
+          <div>📷 Click to add photos</div>
+          <div style="font-size:0.75rem;margin-top:0.25rem;">JPG, PNG supported</div>
+          <input type="file" id="photo-input" accept="image/*" multiple onchange="handlePhotos(this)">
+        </div>
+        <div class="photo-preview" id="photo-preview"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="btn-delete" style="display:none;margin-right:auto;" onclick="deleteRestaurant()">🗑 Delete</button>
+      <button class="btn btn-cancel" onclick="closeAddModal()">Cancel</button>
+      <button class="btn btn-save" onclick="saveRestaurant()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW MODAL -->
+<div class="modal-overlay" id="view-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="view-title">Restaurant</div>
+      <button class="modal-close" onclick="closeViewModal()">✕</button>
+    </div>
+    <div class="modal-body" id="view-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="deleteFromView()">🗑 Delete</button>
+      <button class="btn btn-cancel" onclick="editFromView()">✏️ Edit</button>
+      <button class="btn" id="view-fav-btn" onclick="toggleFavDirect(viewingId)" style="margin-right:auto;order:-1;font-size:1.1rem;padding:0.5rem 0.85rem;background:var(--green-wash);border:1.5px solid var(--border);">🤍</button>
+    </div>
+  </div>
+</div>
+
+<!-- DATE NIGHT MODAL -->
+<div class="modal-overlay" id="dn-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-title">🌹 Date Night Picker</div>
+      <button class="modal-close" onclick="closeDN()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.9rem;color:var(--text-mid);">Filter your Want to Try list and we'll pick somewhere for you!</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cuisine</label>
+          <select id="dn-cuisine"><option value="">Any cuisine</option></select>
+        </div>
+        <div class="form-group">
+          <label>Price Range</label>
+          <select id="dn-price">
+            <option value="">Any price</option>
+            <option value="$">$</option><option value="$$">$$</option><option value="$$$">$$$</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Location Filter</label>
+        <select id="dn-loc-type" onchange="toggleDNLoc()">
+          <option value="none">No location filter</option>
+          <option value="field">Match location keyword</option>
+          <option value="gps">Use my current location</option>
+          <option value="home">Use a home base address</option>
+        </select>
+      </div>
+      <div id="dn-field-row" style="display:none;">
+        <div class="form-group">
+          <label>Location must contain</label>
+          <input type="text" id="dn-loc-text" placeholder="e.g. NJ, Jersey City…">
+        </div>
+      </div>
+      <div id="dn-gps-row" style="display:none;">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Max distance</label>
+            <select id="dn-gps-dist">
+              <option value="10">10 miles</option>
+              <option value="25" selected>25 miles</option>
+              <option value="50">50 miles</option>
+              <option value="100">100 miles</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" onclick="getGPS()" style="width:100%;">📍 Get Location</button>
+          </div>
+        </div>
+        <div id="dn-gps-status" style="font-size:0.78rem;color:var(--text-light);"></div>
+      </div>
+      <div id="dn-home-row" style="display:none;">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Home base address</label>
+            <input type="text" id="dn-home-addr" placeholder="e.g. Montclair, NJ">
+          </div>
+          <div class="form-group">
+            <label>Max distance</label>
+            <select id="dn-home-dist">
+              <option value="10">10 miles</option>
+              <option value="25" selected>25 miles</option>
+              <option value="50">50 miles</option>
+              <option value="100">100 miles</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="dn-result"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel" onclick="closeDN()">Cancel</button>
+      <button class="btn btn-datenight" onclick="pickDateNight()">🎲 Pick for Us!</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+if (localStorage.getItem('tablefor2_v') !== '14') {
+  localStorage.removeItem('tablefor2');
+  localStorage.setItem('tablefor2_v', '14');
+}
+var restaurants = JSON.parse(localStorage.getItem('tablefor2') || '[]');
+
+function save() { localStorage.setItem('tablefor2', JSON.stringify(restaurants)); }
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+// ── VIEWS ─────────────────────────────────────────────────────────────────────
+function switchView(view, el) {
+  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+  el.classList.add('active');
+  document.getElementById('grid-view').style.display = view === 'grid' ? '' : 'none';
+  document.getElementById('fav-view').style.display  = view === 'fav'  ? '' : 'none';
+  document.getElementById('map-view').style.display  = view === 'map'  ? '' : 'none';
+  if (view === 'map') renderMap();
+  if (view === 'fav') renderFavorites();
+}
+
+// ── FILTERS + SORT ────────────────────────────────────────────────────────────
+function getFiltered() {
+  var search   = document.getElementById('search-input').value.toLowerCase();
+  var status   = document.getElementById('filter-status').value;
+  var cuisine  = document.getElementById('filter-cuisine').value;
+  var location = document.getElementById('filter-location').value;
+  var price    = document.getElementById('filter-price').value;
+  var rating   = document.getElementById('filter-rating').value;
+  var fav      = document.getElementById('filter-fav').value;
+  return restaurants.filter(function(r) {
+    if (search && !r.name.toLowerCase().includes(search)) return false;
+    if (status && r.status !== status) return false;
+    if (cuisine && r.cuisine !== cuisine) return false;
+    if (location && !(r.location || '').endsWith(location)) return false;
+    if (price && r.price !== price) return false;
+    if (rating && r.rating !== rating) return false;
+    if (fav === 'fav' && !r.favorite) return false;
+    return true;
+  });
+}
+
+function sortList(list) {
+  var s = document.getElementById('sort-select').value;
+  function priceVal(p) { return p === '$' ? 1 : p === '$$' ? 2 : p === '$$$' ? 3 : 0; }
+  function ratingVal(r) { return r === 'Amazing' ? 5 : r === 'Very Good' ? 4 : r === 'Good' ? 3 : r === 'Okay' ? 2 : r === 'Bad' ? 1 : 0; }
+  var copy = list.slice();
+  if      (s === 'name-asc')   copy.sort(function(a,b){ return a.name.localeCompare(b.name); });
+  else if (s === 'name-desc')  copy.sort(function(a,b){ return b.name.localeCompare(a.name); });
+  else if (s === 'rating')     copy.sort(function(a,b){ return ratingVal(b.rating) - ratingVal(a.rating); });
+  else if (s === 'price-asc')  copy.sort(function(a,b){ return priceVal(a.price) - priceVal(b.price); });
+  else if (s === 'price-desc') copy.sort(function(a,b){ return priceVal(b.price) - priceVal(a.price); });
+  else if (s === 'cuisine')    copy.sort(function(a,b){ return (a.cuisine||'').localeCompare(b.cuisine||''); });
+  else if (s === 'date-asc')   copy.sort(function(a,b){ return (a._added||0) - (b._added||0); });
+  else                         copy.sort(function(a,b){ return (b._added||0) - (a._added||0); });
+  return copy;
+}
+
+function updateFilterOptions() {
+  var cuisines  = [];
+  var locations = [];
+  var states = [];
+  restaurants.forEach(function(r) {
+    if (r.cuisine && cuisines.indexOf(r.cuisine) === -1) cuisines.push(r.cuisine);
+    if (r.location) {
+      var parts = r.location.split(',');
+      var state = parts.length > 1 ? parts[parts.length - 1].trim() : null;
+      if (state && states.indexOf(state) === -1) states.push(state);
+    }
+  });
+  cuisines.sort(); states.sort();
+  var cf = document.getElementById('filter-cuisine');
+  var lf = document.getElementById('filter-location');
+  var cv = cf.value, lv = lf.value;
+  cf.innerHTML = '<option value="">All cuisines</option>' + cuisines.map(function(c){ return '<option>' + c + '</option>'; }).join('');
+  lf.innerHTML = '<option value="">All states</option>' + states.map(function(s){ return '<option>' + s + '</option>'; }).join('');
+  cf.value = cv; lf.value = lv;
+}
+
+function updateStats() {
+  document.getElementById('stat-total').textContent   = restaurants.length;
+  document.getElementById('stat-visited').textContent = restaurants.filter(function(r){ return r.status === 'Visited'; }).length;
+  document.getElementById('stat-want').textContent    = restaurants.filter(function(r){ return r.status === 'Want to Try'; }).length;
+  document.getElementById('stat-must').textContent    = restaurants.filter(function(r){ return r.rating === 'Amazing'; }).length;
+  var visited = restaurants.filter(function(r){ return r.status === 'Visited' && r.cuisine; });
+  var counts = {};
+  visited.forEach(function(r) {
+    var c = r.cuisine.split('/')[0].trim();
+    counts[c] = (counts[c] || 0) + 1;
+  });
+  var top = null;
+  Object.keys(counts).forEach(function(k) { if (!top || counts[k] > counts[top]) top = k; });
+  document.getElementById('stat-cuisine').textContent = top ? (cuisineEmoji(top) + ' ' + top) : '—';
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderAll() {
+  updateFilterOptions();
+  updateStats();
+  renderGrid(getFiltered());
+  if (document.getElementById('fav-view').style.display !== 'none') renderFavorites();
+}
+
+function makeCard(r) {
+  var ratingClass = r.rating === 'Amazing' ? 'rating-amazing' : r.rating === 'Very Good' ? 'rating-verygood' : r.rating === 'Good' ? 'rating-good' : r.rating === 'Okay' ? 'rating-okay' : r.rating === 'Bad' ? 'rating-bad' : '';
+  var ratingEmoji = {Amazing:'🤩',['Very Good']:'😍',Good:'👍',Okay:'😐',Bad:'👎'};
+  var ratingHtml  = r.rating ? '<span class="card-rating ' + ratingClass + '">' + (ratingEmoji[r.rating]||'') + ' ' + r.rating + '</span>' : '';
+  var visitedHtml = (r.status === 'Visited' && r.date)
+    ? '<div class="card-visited-date">📅 Visited ' + new Date(r.date + 'T00:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) + '</div>' : '';
+  return '<div class="restaurant-card' + (r.favorite ? ' is-favorite' : '') + '" onclick="openViewModal(\'' + r.id + '\')">' +
+    '<div class="card-image-placeholder">' + cuisineEmoji(r.cuisine) + '<span>' + (r.cuisine || 'Restaurant') + '</span></div>' +
+    '<span class="card-status-badge ' + (r.status === 'Visited' ? 'badge-visited' : 'badge-want') + '">' + r.status + '</span>' +
+    '<div class="card-body">' +
+      '<div class="card-name">' + r.name + (r.locations && r.locations.length > 1 ? '<span class="multi-loc-badge">' + r.locations.length + ' locations</span>' : '') + '</div>' +
+      '<div class="card-meta">' +
+        (r.cuisine  ? '<span>🍴 ' + r.cuisine  + '</span>' : '') +
+        (r.location ? '<span>📍 ' + r.location + '</span>' : '') +
+        (r.price    ? '<span>' + r.price + '</span>' : '') +
+      '</div>' +
+      ratingHtml + visitedHtml +
+      (r.notes ? '<div class="card-notes">' + r.notes + '</div>' : '') +
+    '</div>' +
+    '<button class="card-heart-btn" onclick="event.stopPropagation();quickFav(\'' + r.id + '\')" title="' + (r.status !== 'Visited' ? 'Visit first to favorite' : r.favorite ? 'Remove from favorites' : 'Add to favorites') + '" style="' + (r.status !== 'Visited' ? 'opacity:0.25;cursor:not-allowed' : '') + '">' + (r.favorite ? '❤️' : '🤍') + '</button>' +
+    '</div>';
+}
+
+function renderGrid(list) {
+  var container = document.getElementById('grid-container');
+  if (list.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="big-icon">🍽</div><h3>No restaurants yet</h3><p>Start building your food adventure list!</p></div>';
+    return;
+  }
+  container.innerHTML = sortList(list).map(makeCard).join('');
+}
+
+function renderFavorites() {
+  var favs = restaurants.filter(function(r) { return r.favorite; });
+  var container = document.getElementById('fav-container');
+  if (favs.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="big-icon">❤️</div><h3>No favorites yet</h3><p>Open any restaurant and tap 🤍 to add it here!</p></div>';
+    return;
+  }
+  container.innerHTML = sortList(favs).map(makeCard).join('');
+}
+
+// ── CUISINE EMOJI ─────────────────────────────────────────────────────────────
+function cuisineEmoji(cuisine) {
+  if (!cuisine) return '🍽';
+  var c = cuisine.toLowerCase();
+  if (c.includes('pizza'))                            return '🍕';
+  if (c.includes('steak') || c.includes('steakhouse')) return '🥩';
+  if (c.includes('italian') || c.includes('pasta'))  return '🍝';
+  if (c.includes('sushi'))                            return '🍣';
+  if (c.includes('ramen') || c.includes('japanese')) return '🍜';
+  if (c.includes('mexican') || c.includes('taco'))   return '🌮';
+  if (c.includes('chinese'))                         return '🥢';
+  if (c.includes('indian'))                          return '🍛';
+  if (c.includes('burger') || c.includes('american')) return '🍔';
+  if (c.includes('thai'))                            return '🌶';
+  if (c.includes('french'))                          return '🥐';
+  if (c.includes('seafood') || c.includes('fish'))   return '🦞';
+  if (c.includes('bbq') || c.includes('barbecue'))   return '🍖';
+  if (c.includes('breakfast') || c.includes('brunch')) return '🥞';
+  if (c.includes('korean'))                          return '🥩';
+  if (c.includes('mediterranean') || c.includes('greek')) return '🫒';
+  return '🍽';
+}
+
+// ── MAP ───────────────────────────────────────────────────────────────────────
+function renderMap() {
+  var list = getFiltered();
+  var mapList = document.getElementById('map-list');
+  mapList.innerHTML = list.map(function(r) {
+    return '<div class="map-list-item" onclick="openViewModal(\'' + r.id + '\')">' +
+      '<div class="map-dot" style="background:' + (r.status === 'Visited' ? 'var(--green-deep)' : 'var(--green-light)') + '"></div>' +
+      '<div><div class="map-item-name">' + r.name + '</div>' +
+      '<div class="map-item-sub">' + [r.cuisine, r.location, r.price].filter(Boolean).join(' · ') + '</div></div></div>';
+  }).join('');
+
+  var withCoords = list.filter(function(r) { return r.lat && r.lng; });
+  var container = document.getElementById('map-container');
+
+  if (withCoords.length === 0) {
+    container.innerHTML = '<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-light);gap:0.5rem;"><div style="font-size:2.5rem">🗺</div><div style="font-weight:500;color:var(--text-mid);">Add addresses to see restaurants on the map</div></div>';
+    return;
+  }
+
+  var lats = withCoords.map(function(r){ return parseFloat(r.lat); });
+  var lngs = withCoords.map(function(r){ return parseFloat(r.lng); });
+  var centerLat = (Math.min.apply(null,lats) + Math.max.apply(null,lats)) / 2;
+  var centerLng = (Math.min.apply(null,lngs) + Math.max.apply(null,lngs)) / 2;
+  var zoom = withCoords.length === 1 ? 14 : 9;
+
+  var markers = withCoords.map(function(r) {
+    return { lat: r.lat, lng: r.lng, name: r.name, status: r.status,
+      sub: [r.cuisine, r.price].filter(Boolean).join(' · '),
+      rating: r.rating || '',
+      color: r.status === 'Visited' ? '#2d6a4f' : '#52b788' };
+  });
+
+  var sOpen = '<scr' + 'ipt';
+  var sClose = '</' + 'scri' + 'pt>';
+  var mapHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+    '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">' +
+    sOpen + ' src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js">' + sClose +
+    '<style>body{margin:0}#m{height:100vh;width:100vw}</style></head><body><div id="m"></div>' +
+    sOpen + '>' +
+    'var map=L.map("m").setView([' + centerLat + ',' + centerLng + '],' + zoom + ');' +
+    'L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap",maxZoom:18}).addTo(map);' +
+    'var places=' + JSON.stringify(markers) + ';' +
+    'var bounds=[];' +
+    'places.forEach(function(p){' +
+      'var icon=L.divIcon({className:"",html:"<div style=\'width:16px;height:16px;border-radius:50%;background:"+p.color+";border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.3)\'></div>",iconSize:[16,16],iconAnchor:[8,8],popupAnchor:[0,-10]});' +
+      'L.marker([p.lat,p.lng],{icon:icon}).addTo(map).bindPopup("<strong>"+p.name+"</strong><br><small>"+p.sub+"</small>"+(p.rating?"<br><small>"+p.rating+"</small>":"")+"<br><span style=\'background:"+p.color+";color:white;padding:1px 6px;border-radius:8px;font-size:11px\'>"+p.status+"</span>");' +
+      'bounds.push([p.lat,p.lng]);' +
+    '});' +
+    'if(bounds.length>1)map.fitBounds(bounds,{padding:[30,30]});' +
+    sClose + '</body></html>';
+
+  var blob = new Blob([mapHtml], {type:'text/html'});
+  var iframe = document.createElement('iframe');
+  iframe.style.cssText = 'width:100%;height:100%;border:none;border-radius:14px;';
+  iframe.src = URL.createObjectURL(blob);
+  container.innerHTML = '';
+  container.appendChild(iframe);
+}
+
+
+// ── MULTI-LOCATION ────────────────────────────────────────────────────────────
+var locationFields = []; // array of {name, address, lat, lng, notes}
+
+function addLocationField(loc) {
+  loc = loc || {name: '', address: '', lat: null, lng: null, notes: ''};
+  var i = locationFields.length;
+  locationFields.push(loc);
+
+  // Parse existing address into parts if present
+  var parts = (loc.address || '').split(',').map(function(s){ return s.trim(); });
+  var existingStreet = parts[0] || '';
+  var existingCity   = loc.city  || parts[1] || '';
+  var stateZip       = (loc.state ? loc.state : (parts[2] || '')).trim().split(' ');
+  var existingState  = stateZip[0] || '';
+  var existingZip    = loc.zip || stateZip[1] || '';
+
+  var container = document.getElementById('locations-container');
+  var div = document.createElement('div');
+  div.className = 'loc-entry';
+  div.id = 'loc-entry-' + i;
+  div.innerHTML =
+    (i > 0 ? '<button class="btn-remove-loc" type="button" onclick="removeLocationField(' + i + ')" title="Remove">✕</button>' +
+    '<div class="loc-entry-label">Location ' + (i + 1) + '</div>' +
+    '<div class="form-group" style="margin-bottom:0.5rem"><label style="font-size:0.75rem;">Label (optional)</label>' +
+    '<input type="text" id="loc-name-' + i + '" placeholder="e.g. NYC, Las Vegas Strip…"></div>' : '') +
+    '<div class="form-row" style="gap:0.5rem;margin-bottom:0.5rem;">' +
+    '<div class="form-group" style="flex:3;margin-bottom:0;"><label style="font-size:0.75rem;">Street</label>' +
+    '<input type="text" id="loc-street-' + i + '" placeholder="123 Main St"></div>' +
+    '</div>' +
+    '<div class="form-row" style="gap:0.5rem;">' +
+    '<div class="form-group" style="flex:2;margin-bottom:0;"><label style="font-size:0.75rem;">City</label>' +
+    '<input type="text" id="loc-city-' + i + '" placeholder="Montclair"></div>' +
+    '<div class="form-group" style="flex:1;margin-bottom:0;"><label style="font-size:0.75rem;">State</label>' +
+    '<input type="text" id="loc-state-' + i + '" placeholder="NJ" maxlength="2" style="text-transform:uppercase;"></div>' +
+    '<div class="form-group" style="flex:1;margin-bottom:0;"><label style="font-size:0.75rem;">Zip</label>' +
+    '<input type="text" id="loc-zip-' + i + '" placeholder="07042" maxlength="10"></div>' +
+    '</div>';
+  container.appendChild(div);
+
+  var streetEl = document.getElementById('loc-street-' + i);
+  var cityEl   = document.getElementById('loc-city-'   + i);
+  var stateEl  = document.getElementById('loc-state-'  + i);
+  var zipEl    = document.getElementById('loc-zip-'    + i);
+  var nameEl   = document.getElementById('loc-name-'   + i);
+  if (streetEl) streetEl.value = existingStreet;
+  if (cityEl)   cityEl.value   = existingCity;
+  if (stateEl)  stateEl.value  = existingState.toUpperCase();
+  if (zipEl)    zipEl.value    = existingZip;
+  if (nameEl)   nameEl.value   = loc.name || '';
+
+  if (stateEl) stateEl.addEventListener('input', function(){ this.value = this.value.toUpperCase(); });
+}
+
+function removeLocationField(i) {
+  var el = document.getElementById('loc-entry-' + i);
+  if (el) el.remove();
+  locationFields[i] = null;
+}
+
+function getLocationFields() {
+  var result = [];
+  locationFields.forEach(function(loc, i) {
+    if (!loc) return;
+    var streetEl = document.getElementById('loc-street-' + i);
+    var cityEl   = document.getElementById('loc-city-'   + i);
+    var stateEl  = document.getElementById('loc-state-'  + i);
+    var zipEl    = document.getElementById('loc-zip-'    + i);
+    var nameEl   = document.getElementById('loc-name-'   + i);
+    if (!streetEl && !cityEl) return;
+    var street = streetEl ? streetEl.value.trim() : '';
+    var city   = cityEl   ? cityEl.value.trim()   : '';
+    var state  = stateEl  ? stateEl.value.trim().toUpperCase()  : '';
+    var zip    = zipEl    ? zipEl.value.trim()    : '';
+    if (!street && !city) return;
+    // Build full address string
+    var addrParts = [street, city, state ? (state + (zip ? ' ' + zip : '')) : zip].filter(Boolean);
+    var addr = addrParts.join(', ');
+    // City, State as the location label
+    var cityState = [city, state].filter(Boolean).join(', ');
+    result.push({
+      name:     nameEl ? nameEl.value.trim() : cityState,
+      address:  addr,
+      city:     city,
+      state:    state,
+      zip:      zip,
+      lat:      loc.lat,
+      lng:      loc.lng,
+      notes:    ''
+    });
+  });
+  return result;
+}
+
+function switchLocTab(btn, idx, groupId) {
+  var group = document.getElementById(groupId);
+  if (!group) return;
+  group.querySelectorAll('.loc-tab').forEach(function(t){ t.classList.remove('active'); });
+  btn.classList.add('active');
+  var panels = document.querySelectorAll('[id^="' + groupId + '-"]');
+  panels.forEach(function(p, i){ p.classList.toggle('active', i === idx); });
+}
+
+// ── ADD / EDIT MODAL ──────────────────────────────────────────────────────────
+var editingId     = null;
+var viewingId     = null;
+var selectedStatus = 'Want to Try';
+var selectedRating = '';
+var isFavorite     = false;
+var currentPhotos  = [];
+
+function openAddModal(id) {
+  editingId = id || null;
+  currentPhotos = [];
+  document.getElementById('add-modal-title').textContent = id ? 'Edit Restaurant' : 'Add Restaurant';
+  document.getElementById('btn-delete').style.display = id ? '' : 'none';
+
+  var fields = ['f-name','f-cuisine','f-date','f-recommended','f-occasion','f-dish','f-notes','f-website'];
+  // Also clear f-location if it still exists
+  var fLoc = document.getElementById('f-location'); if (fLoc) fLoc.value = '';
+  fields.forEach(function(fid) { document.getElementById(fid).value = ''; });
+  document.getElementById('f-price').value = '';
+  document.getElementById('photo-preview').innerHTML = '';
+  document.getElementById('f-name').dataset.lat = '';
+  document.getElementById('f-name').dataset.lng = '';
+  document.getElementById('locations-container').innerHTML = '';
+  locationFields = [];
+  hideAC();
+
+  selectedStatus = 'Want to Try';
+  selectedRating = '';
+  isFavorite = false;
+  document.querySelectorAll('.status-btn').forEach(function(b) { b.classList.remove('active-want','active-visited'); });
+  document.querySelectorAll('.rating-btn').forEach(function(b) { b.classList.remove('selected'); });
+  document.querySelector('[data-status="Want to Try"]').classList.add('active-want');
+  updateFavUI();
+  updateRatingVisibility();
+  if (!id) addLocationField();
+
+  if (id) {
+    var r = restaurants.find(function(x){ return x.id === id; });
+    if (r) {
+      document.getElementById('f-name').value      = r.name || '';
+      document.getElementById('f-cuisine').value   = r.cuisine || '';
+      document.getElementById('f-date').value      = r.date || '';
+      document.getElementById('f-recommended').value = r.companions || r.recommended || '';
+      document.getElementById('f-dish').value      = r.dish || '';
+      document.getElementById('f-notes').value     = r.notes || '';
+      document.getElementById('f-website').value   = r.website || '';
+      document.getElementById('f-price').value     = r.price || '';
+      selectedStatus = r.status || 'Want to Try';
+      selectedRating = r.rating || '';
+      isFavorite = !!r.favorite;
+      document.querySelectorAll('.status-btn').forEach(function(b) { b.classList.remove('active-want','active-visited'); });
+      var sb = document.querySelector('[data-status="' + selectedStatus + '"]');
+      if (sb) sb.classList.add(selectedStatus === 'Visited' ? 'active-visited' : 'active-want');
+      updateRatingVisibility();
+      if (selectedRating) {
+        var rb = document.querySelector('[data-rating="' + selectedRating + '"]');
+        if (rb) rb.classList.add('selected');
+      }
+      updateFavUI();
+      currentPhotos = r.photos ? r.photos.slice() : [];
+      renderPhotoPreviews();
+      // Load locations into form
+      document.getElementById('locations-container').innerHTML = '';
+      locationFields = [];
+      var editLocs = r.locations && r.locations.length > 0 ? r.locations : (r.address ? [{name: r.location||'', address: r.address, lat: r.lat, lng: r.lng, notes:''}] : []);
+      if (editLocs.length === 0) addLocationField();
+      else editLocs.forEach(function(l){ addLocationField(l); });
+    }
+  }
+  document.getElementById('add-modal').classList.add('open');
+}
+
+function closeAddModal() {
+  document.getElementById('add-modal').classList.remove('open');
+  editingId = null;
+  hideAC();
+}
+
+function selectStatus(btn) {
+  document.querySelectorAll('.status-btn').forEach(function(b){ b.classList.remove('active-want','active-visited'); });
+  selectedStatus = btn.dataset.status;
+  btn.classList.add(selectedStatus === 'Visited' ? 'active-visited' : 'active-want');
+  if (selectedStatus !== 'Visited') isFavorite = false;
+  updateRatingVisibility();
+  updateFavUI();
+}
+
+function updateRatingVisibility() {
+  var rg = document.getElementById('rating-group');
+  if (!rg) return;
+  if (selectedStatus === 'Visited') {
+    rg.style.display = '';
+  } else {
+    rg.style.display = 'none';
+    // Clear rating when switching to Want to Try
+    selectedRating = '';
+    document.querySelectorAll('.rating-btn').forEach(function(b){ b.classList.remove('selected'); });
+  }
+}
+
+function selectRating(btn) {
+  document.querySelectorAll('.rating-btn').forEach(function(b){ b.classList.remove('selected'); });
+  selectedRating = btn.dataset.rating;
+  btn.classList.add('selected');
+}
+
+function toggleFavForm() {
+  if (selectedStatus !== 'Visited') return;
+  isFavorite = !isFavorite;
+  updateFavUI();
+}
+
+function updateFavUI() {
+  var row   = document.getElementById('fav-toggle-row');
+  var heart = document.getElementById('fav-toggle-heart');
+  var label = document.getElementById('fav-toggle-label');
+  var isVisited = selectedStatus === 'Visited';
+  row.style.opacity  = isVisited ? '1' : '0.4';
+  row.style.cursor   = isVisited ? 'pointer' : 'not-allowed';
+  row.title          = isVisited ? '' : 'Only visited restaurants can be favorites';
+  if (isFavorite && isVisited) {
+    row.classList.add('active');
+    heart.textContent = '❤️';
+    label.textContent = 'This is a favorite spot!';
+  } else {
+    row.classList.remove('active');
+    heart.textContent = '🤍';
+    label.textContent = isVisited ? 'Mark as a favorite spot' : 'Visit first to favorite';
+  }
+}
+
+function handlePhotos(input) {
+  var files = Array.from(input.files);
+  files.forEach(function(file) {
+    var reader = new FileReader();
+    reader.onload = function(e) { currentPhotos.push(e.target.result); renderPhotoPreviews(); };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderPhotoPreviews() {
+  document.getElementById('photo-preview').innerHTML = currentPhotos.map(function(src, i) {
+    return '<img class="photo-thumb" src="' + src + '" onclick="removePhoto(' + i + ')" title="Click to remove">';
+  }).join('');
+}
+
+function removePhoto(i) { currentPhotos.splice(i, 1); renderPhotoPreviews(); }
+
+async function saveRestaurant() {
+  var name = document.getElementById('f-name').value.trim();
+  if (!name) { alert('Please enter a restaurant name!'); return; }
+
+  // Gather and geocode locations
+  var locs = getLocationFields();
+  if (locs.length === 0) { alert('Please add at least one location!'); return; }
+  for (var li = 0; li < locs.length; li++) {
+    if (!locs[li].lat && locs[li].address) {
+      try {
+        var gRes = await fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(locs[li].address) + '&limit=1');
+        var gData = await gRes.json();
+        var gCoords = gData.features && gData.features[0] && gData.features[0].geometry && gData.features[0].geometry.coordinates;
+        if (gCoords) { locs[li].lng = gCoords[0]; locs[li].lat = gCoords[1]; }
+      } catch(e) {}
+    }
+  }
+  // Use first location for legacy lat/lng/address fields
+  var address = locs[0].address || '';
+  var lat = locs[0].lat || null;
+  var lng = locs[0].lng || null;
+
+  var existing = editingId ? restaurants.find(function(x){ return x.id === editingId; }) : null;
+  var wasVisited = existing ? existing.status : null;
+
+  var r = {
+    id:          editingId || genId(),
+    _added:      existing ? (existing._added || Date.now()) : Date.now(),
+    name:        name,
+    cuisine:     document.getElementById('f-cuisine').value.trim(),
+    location:    locs[0] ? ([locs[0].city, locs[0].state].filter(Boolean).join(', ') || locs[0].name || '') : '',
+    address:     address,
+    lat:         lat,
+    lng:         lng,
+    locations:   locs,
+    price:       document.getElementById('f-price').value,
+    status:      selectedStatus,
+    date:        document.getElementById('f-date').value,
+    recommended: document.getElementById('f-recommended').value.trim(), companions: document.getElementById('f-recommended').value.trim(), occasion: document.getElementById('f-occasion').value.trim(),
+    dish:        document.getElementById('f-dish').value.trim(),
+    website:     document.getElementById('f-website').value.trim(),
+    rating:      selectedRating,
+    notes:       document.getElementById('f-notes').value.trim(),
+    favorite:    isFavorite,
+    photos:      currentPhotos.slice()
+  };
+
+  if (editingId) {
+    var idx = restaurants.findIndex(function(x){ return x.id === editingId; });
+    if (lat === null && existing) { r.lat = existing.lat; r.lng = existing.lng; }
+    if (idx !== -1) restaurants[idx] = r;
+  } else {
+    restaurants.unshift(r);
+  }
+
+  save();
+  closeAddModal();
+  renderAll();
+  if (selectedStatus === 'Visited' && wasVisited !== 'Visited') launchConfetti();
+}
+
+function deleteRestaurant() {
+  if (!editingId) return;
+  if (!confirm('Delete this restaurant?')) return;
+  restaurants = restaurants.filter(function(r){ return r.id !== editingId; });
+  save(); closeAddModal(); renderAll();
+}
+
+// ── VIEW MODAL ────────────────────────────────────────────────────────────────
+function openViewModal(id) {
+  viewingId = id;
+  var r = restaurants.find(function(x){ return x.id === id; });
+  if (!r) return;
+
+  var titleEl = document.getElementById('view-title');
+  titleEl.textContent = r.name;
+
+  // Set footer heart
+  var favBtn = document.getElementById('view-fav-btn');
+  if (favBtn) {
+    if (r.status !== 'Visited') {
+      favBtn.style.display = 'none';
+    } else {
+      favBtn.style.display = '';
+      favBtn.textContent = r.favorite ? '❤️' : '🤍';
+      favBtn.title = r.favorite ? 'Remove from favorites' : 'Add to favorites';
+    }
+  }
+
+  var ratingClass = r.rating === 'Amazing' ? 'rating-amazing' : r.rating === 'Very Good' ? 'rating-verygood' : r.rating === 'Good' ? 'rating-good' : r.rating === 'Okay' ? 'rating-okay' : r.rating === 'Bad' ? 'rating-bad' : '';
+  var statusClass = r.status === 'Visited' ? 'badge-visited' : 'badge-want';
+
+  // Build locations section
+  var locs = r.locations && r.locations.length > 0 ? r.locations : (r.address ? [{name: r.location || 'Location 1', address: r.address, lat: r.lat, lng: r.lng, notes: ''}] : []);
+  var locationsHtml = '';
+  if (locs.length === 1) {
+    var l = locs[0];
+    locationsHtml = l.address ? '<div class="detail-row"><div class="detail-item"><div class="d-label">Address</div><div class="d-value">' + l.address + '<button class="copy-btn" onclick="copyAddr(\'' + l.address.replace(/'/g, "\'") + '\')">📋 Copy</button></div></div></div>' : '';
+  } else if (locs.length > 1) {
+    var tabBtns = locs.map(function(l, i) {
+      return '<button class="loc-tab' + (i===0?' active':'') + '" onclick="switchLocTab(this,' + i + ',\'loc-panel-' + r.id + '\')">' + (l.name || ('Location ' + (i+1))) + '</button>';
+    }).join('');
+    var panels = locs.map(function(l, i) {
+      var addrBtn = l.address ? '<button class="copy-btn" onclick="copyAddr(\'' + l.address.replace(/'/g, "\'") + '\')">📋 Copy</button>' : '';
+      return '<div class="loc-panel' + (i===0?' active':'') + '" id="loc-panel-' + r.id + '-' + i + '">' +
+        (l.address ? '<div class="detail-row"><div class="detail-item"><div class="d-label">Address</div><div class="d-value">' + l.address + addrBtn + '</div></div></div>' : '') +
+        (l.notes ? '<div class="detail-notes" style="margin-top:0.25rem">' + l.notes + '</div>' : '') +
+        '</div>';
+    }).join('');
+    locationsHtml = '<div class="loc-tabs" id="loc-panel-' + r.id + '">' + tabBtns + '</div>' + panels;
+  }
+
+  var photosHtml = '';
+  if (r.photos && r.photos.length > 0) {
+    photosHtml = '<div class="view-photos">' + r.photos.map(function(p){ return '<img src="' + p + '">'; }).join('') + '</div>';
+  }
+
+  var html = photosHtml +
+    '<div class="detail-row">' +
+      '<div class="detail-item"><div class="d-label">Status</div><div class="d-value"><span class="card-status-badge ' + statusClass + '" style="position:static;">' + r.status + '</span></div></div>' +
+      (r.rating ? '<div class="detail-item"><div class="d-label">Rating</div><div class="d-value"><span class="card-rating ' + ratingClass + '">' + r.rating + '</span></div></div>' : '') +
+      (r.price  ? '<div class="detail-item"><div class="d-label">Price</div><div class="d-value">' + r.price + '</div></div>' : '') +
+    '</div>' +
+    '<div class="detail-row">' +
+      (r.cuisine  ? '<div class="detail-item"><div class="d-label">Cuisine</div><div class="d-value">' + r.cuisine + '</div></div>' : '') +
+      (r.location ? '<div class="detail-item"><div class="d-label">Location</div><div class="d-value">' + r.location + '</div></div>' : '') +
+      (r.website  ? '<div class="detail-item"><div class="d-label">Website</div><div class="d-value"><a href="' + r.website + '" target="_blank" style="color:var(--green-mid);font-weight:600;text-decoration:none;">🔗 Visit Site</a></div></div>' : '') +
+    '</div>' +
+    (r.address ? '<div class="detail-row"><div class="detail-item"><div class="d-label">Address</div><div class="d-value">' + r.address + '<button class="copy-btn" onclick="copyAddr(\'' + r.address.replace(/'/g, "\\'") + '\')">📋 Copy</button></div></div></div>' : '') +
+        '<div class="detail-row">' +
+      (r.date      ? '<div class="detail-item"><div class="d-label">Date Visited</div><div class="d-value">' + new Date(r.date + 'T00:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div></div>' : '') +
+      (r.recommended ? '<div class="detail-item"><div class="d-label">Who We Were With</div><div class="d-value">' + (r.companions || r.recommended || '') + '</div></div>' : '') +
+      (r.occasion ? '<div class=\"detail-item\"><div class=\"d-label\">Occasion</div><div class=\"d-value\">' + r.occasion + '</div></div>' : '') +
+    '</div>' +
+    (r.dish  ? '<div class="detail-row"><div class="detail-item"><div class="d-label">Favorite Dish</div><div class="d-value">' + r.dish + '</div></div></div>' : '') +
+    (r.notes ? '<div class="detail-notes"><strong style="font-size:0.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-light);">Notes</strong><p style="margin-top:0.3rem">' + r.notes + '</p></div>' : '');
+
+  document.getElementById('view-body').innerHTML = html;
+  document.getElementById('view-modal').classList.add('open');
+}
+
+function closeViewModal() { document.getElementById('view-modal').classList.remove('open'); }
+
+function deleteFromView() {
+  if (!viewingId) return;
+  if (!confirm('Delete this restaurant?')) return;
+  restaurants = restaurants.filter(function(r){ return r.id !== viewingId; });
+  save(); closeViewModal(); renderAll();
+}
+
+function editFromView() { closeViewModal(); openAddModal(viewingId); }
+
+function quickFav(id) {
+  var r = restaurants.find(function(x){ return x.id === id; });
+  if (!r || r.status !== 'Visited') return;
+  r.favorite = !r.favorite;
+  save();
+  renderAll();
+}
+
+function toggleFavDirect(id) {
+  var r = restaurants.find(function(x){ return x.id === id; });
+  if (!r || r.status !== 'Visited') return;
+  r.favorite = !r.favorite;
+  save(); renderAll(); openViewModal(id);
+}
+
+function copyAddr(addr) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(addr).then(function() {
+      var btn = document.querySelector('.copy-btn');
+      if (btn) { btn.textContent = '✅ Copied!'; setTimeout(function(){ btn.textContent = '📋 Copy'; }, 2000); }
+    });
+  } else {
+    prompt('Copy this address:', addr);
+  }
+}
+
+// ── CONFETTI ──────────────────────────────────────────────────────────────────
+function launchConfetti() {
+  var colors = ['#52b788','#2d6a4f','#f48fb1','#fff176','#80deea','#ffcc80'];
+  for (var i = 0; i < 80; i++) {
+    (function() {
+      var el = document.createElement('div');
+      el.className = 'confetti-piece';
+      el.style.left = (Math.random() * 100) + 'vw';
+      el.style.background = colors[Math.floor(Math.random() * colors.length)];
+      el.style.width  = (Math.random() * 8 + 6) + 'px';
+      el.style.height = (Math.random() * 8 + 6) + 'px';
+      el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      el.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
+      el.style.animationDelay   = (Math.random() * 0.8) + 's';
+      document.body.appendChild(el);
+      setTimeout(function(){ el.remove(); }, 4000);
+    })();
+  }
+}
+
+// ── DATE NIGHT ────────────────────────────────────────────────────────────────
+var dnLat = null, dnLng = null;
+
+function openDateNight() {
+  var wantCuisines = [];
+  restaurants.filter(function(r){ return r.status === 'Want to Try' && r.cuisine; }).forEach(function(r) {
+    var c = r.cuisine.split('/')[0].trim();
+    if (wantCuisines.indexOf(c) === -1) wantCuisines.push(c);
+  });
+  wantCuisines.sort();
+  var sel = document.getElementById('dn-cuisine');
+  sel.innerHTML = '<option value="">Any cuisine</option>' + wantCuisines.map(function(c){ return '<option>' + c + '</option>'; }).join('');
+  document.getElementById('dn-result').innerHTML = '';
+  document.getElementById('dn-loc-type').value = 'none';
+  toggleDNLoc();
+  document.getElementById('dn-modal').classList.add('open');
+}
+
+function closeDN() { document.getElementById('dn-modal').classList.remove('open'); }
+
+function toggleDNLoc() {
+  var t = document.getElementById('dn-loc-type').value;
+  document.getElementById('dn-field-row').style.display = t === 'field' ? '' : 'none';
+  document.getElementById('dn-gps-row').style.display   = t === 'gps'   ? '' : 'none';
+  document.getElementById('dn-home-row').style.display  = t === 'home'  ? '' : 'none';
+}
+
+function getGPS() {
+  var status = document.getElementById('dn-gps-status');
+  status.textContent = '📍 Getting your location…';
+  navigator.geolocation.getCurrentPosition(
+    function(pos) { dnLat = pos.coords.latitude; dnLng = pos.coords.longitude; status.textContent = '✅ Location found!'; },
+    function()    { status.textContent = '⚠️ Could not get location. Try home base instead.'; }
+  );
+}
+
+function haversine(lat1, lng1, lat2, lng2) {
+  var R = 3958.8;
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLng = (lng2 - lng1) * Math.PI / 180;
+  var a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+async function pickDateNight() {
+  var cuisine = document.getElementById('dn-cuisine').value;
+  var price   = document.getElementById('dn-price').value;
+  var locType = document.getElementById('dn-loc-type').value;
+  var resultDiv = document.getElementById('dn-result');
+  resultDiv.innerHTML = '';
+
+  var pool = restaurants.filter(function(r){ return r.status === 'Want to Try'; });
+  if (cuisine) pool = pool.filter(function(r){ return (r.cuisine||'').toLowerCase().includes(cuisine.toLowerCase()); });
+  if (price)   pool = pool.filter(function(r){ return r.price === price; });
+
+  if (locType === 'field') {
+    var text = document.getElementById('dn-loc-text').value.trim().toLowerCase();
+    if (text) pool = pool.filter(function(r){ return (r.location||'').toLowerCase().includes(text) || (r.address||'').toLowerCase().includes(text); });
+  } else if (locType === 'gps' && dnLat) {
+    var maxMi = parseInt(document.getElementById('dn-gps-dist').value);
+    pool = pool.filter(function(r){ return r.lat && r.lng && haversine(dnLat, dnLng, r.lat, r.lng) <= maxMi; });
+  } else if (locType === 'home') {
+    var homeAddr = document.getElementById('dn-home-addr').value.trim();
+    var maxMiH   = parseInt(document.getElementById('dn-home-dist').value);
+    if (homeAddr) {
+      resultDiv.innerHTML = '<div class="ac-loading">📍 Finding home base…</div>';
+      try {
+        var hRes  = await fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(homeAddr) + '&limit=1');
+        var hData = await hRes.json();
+        var hCoords = hData.features && hData.features[0] && hData.features[0].geometry && hData.features[0].geometry.coordinates;
+        if (hCoords) {
+          var homeLat = hCoords[1], homeLng = hCoords[0];
+          pool = pool.filter(function(r){ return r.lat && r.lng && haversine(homeLat, homeLng, r.lat, r.lng) <= maxMiH; });
+        }
+      } catch(e) {}
+    }
+  }
+
+  if (pool.length === 0) {
+    resultDiv.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text-light);">😕 No restaurants match those filters.<br><small>Try loosening your criteria!</small></div>';
+    return;
+  }
+
+  var pick = pool[Math.floor(Math.random() * pool.length)];
+  resultDiv.innerHTML = '<div class="datenight-result" onclick="closeDN();setTimeout(function(){openViewModal(\''+pick.id+'\');},200);">' +
+    '<div class="dn-emoji">' + cuisineEmoji(pick.cuisine) + '</div>' +
+    '<div class="dn-name">' + pick.name + '</div>' +
+    '<div class="dn-meta">' + [pick.cuisine, pick.location, pick.price].filter(Boolean).join(' · ') + '</div>' +
+    (pick.notes ? '<div style="margin-top:0.5rem;font-size:0.82rem;color:var(--text-mid);font-style:italic;">"' + pick.notes.slice(0,100) + (pick.notes.length > 100 ? '…' : '') + '"</div>' : '') +
+    '<div style="margin-top:0.75rem;font-size:0.78rem;color:var(--text-light);">Tap to view details · ' + pool.length + ' option' + (pool.length !== 1 ? 's' : '') + ' matched</div>' +
+    '</div>';
+}
+
+// ── AUTOCOMPLETE ──────────────────────────────────────────────────────────────
+var acTimeout = null;
+var acItems   = [];
+
+function onNameInput(val) {
+  clearTimeout(acTimeout);
+  if (val.length < 2) { hideAC(); return; }
+  var dd = document.getElementById('ac-dropdown');
+  dd.style.display = 'block';
+  dd.innerHTML = '<div class="ac-loading">🔍 Searching…</div>';
+  acTimeout = setTimeout(function(){ searchPlaces(val); }, 350);
+}
+
+function hideAC() {
+  var dd = document.getElementById('ac-dropdown');
+  if (dd) { dd.style.display = 'none'; dd.innerHTML = ''; }
+  acItems = [];
+}
+
+async function searchPlaces(query) {
+  try {
+    var controller = new AbortController();
+    var timeout = setTimeout(function(){ controller.abort(); }, 4000);
+    var res  = await fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(query) + '&limit=8&lang=en', { signal: controller.signal });
+    clearTimeout(timeout);
+    var data = await res.json();
+    renderAC(data.features || [], query);
+  } catch(e) {
+    var dd = document.getElementById('ac-dropdown');
+    dd.style.display = 'block';
+    dd.innerHTML = '<div class="ac-loading" style="padding:0.75rem;line-height:1.6;">⚠️ Live search not available.<br><span style="font-size:0.8rem;opacity:0.75;">The Claude app blocks network requests. Fill in the address fields manually — everything saves normally!</span></div>';
+  }
+}
+
+function renderAC(features, query) {
+  var food = features.filter(function(f) {
+    var v = ((f.properties || {}).osm_value || '').toLowerCase();
+    return ['restaurant','fast_food','cafe','bar','pub','bakery','ice_cream','pizza','sushi','diner','bistro'].indexOf(v) !== -1
+        || (f.properties || {}).osm_key === 'amenity';
+  });
+  acItems = (food.length > 0 ? food : features).slice(0, 7);
+
+  var dd = document.getElementById('ac-dropdown');
+  if (acItems.length === 0) {
+    dd.innerHTML = '<div class="ac-loading">No results — try adding city name</div>';
+    dd.style.display = 'block';
+    return;
+  }
+
+  dd.innerHTML = acItems.map(function(f, i) {
+    var p      = f.properties || {};
+    var coords = f.geometry && f.geometry.coordinates || [];
+    var name   = p.name || query;
+    var city   = [p.city || p.town || p.village, p.state].filter(Boolean).join(', ');
+    var hl     = name.toLowerCase().indexOf(query.toLowerCase());
+    var nameHl = hl === -1 ? name : name.slice(0,hl) + '<strong>' + name.slice(hl, hl+query.length) + '</strong>' + name.slice(hl+query.length);
+    return '<div class="ac-item" data-i="' + i + '">' +
+      '<div class="ac-name">' + nameHl + '</div>' +
+      '<div class="ac-sub">📍 ' + (city || 'Unknown location') + '</div>' +
+      '</div>';
+  }).join('');
+
+  dd.querySelectorAll('.ac-item').forEach(function(el) {
+    el.addEventListener('click', function() { selectAC(parseInt(el.dataset.i)); });
+  });
+  dd.style.display = 'block';
+}
+
+function selectAC(i) {
+  var f = acItems[i];
+  if (!f) return;
+  var p      = f.properties || {};
+  var coords = f.geometry && f.geometry.coordinates || [];
+  var name   = p.name || '';
+  var city   = p.city || p.town || p.village || '';
+  var street = [p.housenumber, p.street].filter(Boolean).join(' ');
+  var addr   = [street, p.city || p.town || p.village, p.state, p.country].filter(Boolean).join(', ');
+  var cmap   = {fast_food:'Fast Food',cafe:'Cafe',bar:'Bar',pub:'Pub',bakery:'Bakery',ice_cream:'Ice Cream',pizza:'Pizza',sushi:'Japanese',mexican:'Mexican',thai:'Thai',italian:'Italian',french:'French',japanese:'Japanese'};
+
+  document.getElementById('f-name').value = name;
+  // Fill split address fields from autocomplete result
+  var streetEl = document.getElementById('loc-street-0');
+  var cityEl   = document.getElementById('loc-city-0');
+  var stateEl  = document.getElementById('loc-state-0');
+  var zipEl    = document.getElementById('loc-zip-0');
+  if (streetEl && !streetEl.value) streetEl.value = street;
+  if (cityEl   && !cityEl.value)   cityEl.value   = p.city || p.town || p.village || '';
+  if (stateEl  && !stateEl.value)  stateEl.value  = (p.state || '').split(' ').pop().toUpperCase().slice(0,2);
+  if (zipEl    && !zipEl.value)    zipEl.value    = p.postcode || '';
+  var cuisineHint = cmap[(p.osm_value||'').toLowerCase()];
+  if (cuisineHint && !document.getElementById('f-cuisine').value) document.getElementById('f-cuisine').value = cuisineHint;
+
+  var nameEl = document.getElementById('f-name');
+  if (coords[0]) { nameEl.dataset.lat = coords[1]; nameEl.dataset.lng = coords[0]; }
+  hideAC();
+}
+
+// Keyboard nav for AC
+document.addEventListener('keydown', function(e) {
+  var dd = document.getElementById('ac-dropdown');
+  if (!dd || dd.style.display === 'none') return;
+  var items = dd.querySelectorAll('.ac-item');
+  var highlighted = dd.querySelector('.ac-item.highlighted');
+  var idx = highlighted ? parseInt(highlighted.dataset.i) : -1;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    var next = Math.min(idx + 1, items.length - 1);
+    items.forEach(function(el){ el.classList.remove('highlighted'); });
+    if (items[next]) items[next].classList.add('highlighted');
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    var prev = Math.max(idx - 1, 0);
+    items.forEach(function(el){ el.classList.remove('highlighted'); });
+    if (items[prev]) items[prev].classList.add('highlighted');
+  } else if (e.key === 'Enter' && highlighted) {
+    e.preventDefault();
+    selectAC(parseInt(highlighted.dataset.i));
+  } else if (e.key === 'Escape') {
+    hideAC();
+  }
+});
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#f-name') && !e.target.closest('#ac-dropdown')) hideAC();
+});
+
+// Close modals on overlay click
+document.getElementById('add-modal').addEventListener('click', function(e){ if (e.target === e.currentTarget) closeAddModal(); });
+document.getElementById('view-modal').addEventListener('click', function(e){ if (e.target === e.currentTarget) closeViewModal(); });
+document.getElementById('dn-modal').addEventListener('click', function(e){ if (e.target === e.currentTarget) closeDN(); });
+
+// ── SAMPLE DATA ───────────────────────────────────────────────────────────────
+if (restaurants.length === 0) {
+  restaurants = [
+    { id:genId(), _added:2, name:"Ninety Acres", cuisine:"American", location:"Peapack, NJ", address:"2 Main St, Peapack, NJ", lat:40.7151, lng:-74.6593, price:"$$$", status:"Visited", date:"2025-09-05", recommended:"Friend", dish:"Dry-aged beef tenderloin", rating:"Amazing", notes:"On a gorgeous working farm. The ingredients are all grown on-site. Perfect for a special occasion dinner.", website:"https://www.ninetyacres.com", photos:[], favorite:true },
+    { id:genId(), _added:6, name:"Ani Ramen", cuisine:"Ramen", location:"Montclair, NJ", address:"27 Church St, Montclair, NJ", lat:40.8267, lng:-74.2088, price:"$", status:"Visited", date:"2025-11-22", recommended:"Friend", dish:"Spicy miso ramen", rating:"Good", notes:"Really solid ramen, generous portions. The spicy miso broth is rich.", website:"https://www.aniramen.com", photos:[], favorite:false },
+    { id:'manual001', _added:1771777790001, name:"JINYA Ramen Bar", cuisine:"Ramen", location:"Las Vegas, NV", address:"3939 Spring Mountain Rd, Las Vegas, NV 89102", lat:36.1147, lng:-115.1891, price:"$$", status:"Visited", date:'', recommended:'', dish:'', website:"https://www.jinyaramenbar.com", rating:"Very Good", notes:"Great ramen, consistent across locations.", photos:[], favorite:true, locations:[{name:"Flamingo",address:"3939 Spring Mountain Rd, Las Vegas, NV 89102",lat:36.1147,lng:-115.1891,notes:"Near the Flamingo casino"},{name:"Paradise Rd",address:"4480 Paradise Rd, Las Vegas, NV 89169",lat:36.1073,lng:-115.1492,notes:""}] },
+    { id:'manual003', _added:1771777510003, name:"Roots Steakhouse", cuisine:"Steakhouse", location:"Morristown, NJ", address:"20 Washington St, Morristown, NJ 07960", lat:40.7968, lng:-74.4815, price:"$$$", status:'Visited', date:'', recommended:'', dish:'', website:"https://rootssteakhouse.com", rating:"Good", notes:"", photos:[], favorite:false },
+    { id:'manual004', _added:1771777801004, name:"The Capital Grille", cuisine:"Steakhouse", location:"Multiple Locations", address:"120 42nd St, New York, NY 10168", lat:40.7527, lng:-73.9772, price:"$$$", status:"Visited", date:'', recommended:'', dish:'', website:"https://www.thecapitalgrille.com", rating:"Very Good", notes:"", photos:[], favorite:false, locations:[{name:"New York, NY",address:"120 42nd St, New York, NY 10168",lat:40.7527,lng:-73.9772,notes:""},{name:"East Hanover, NJ",address:"240 NJ-10, East Hanover, NJ 07936",lat:40.8165,lng:-74.3629,notes:""}] },
+    { id:'manual006', _added:1771777510006, name:"Casa de Pasta", cuisine:"Italian", location:"Randolph, NJ", address:"1171 Sussex Tpke, Randolph, NJ 07869", lat:40.862, lng:-74.576, price:"$$", status:'Visited', date:'', recommended:'', dish:'', website:"", rating:"Good", notes:"", photos:[], favorite:false }
+,
+    { id:'manual010x', _added:1771777701010, name:'Casa Bella', cuisine:'Italian', location:"Denville, NJ", address:'3195 NJ-10, Denville, NJ 07834', lat:40.8826, lng:-74.481, price:'$$', status:'Visited', date:'', recommended:'', dish:'', website:'https://casabella46.com', rating:'Very Good', notes:'', photos:[], favorite:false },
+    { id:'manual011x', _added:1771777701011, name:'Sogo', cuisine:'Japanese', location:"Denville, NJ", address:'3160 NJ-10, Denville, NJ 07834', lat:40.8824, lng:-74.4812, price:'$$', status:'Visited', date:'', recommended:'', dish:'', website:'', rating:'Very Good', notes:'', photos:[], favorite:true },
+    { id:'manual012x', _added:1771777701012, name:'Hunan Taste', cuisine:'Chinese', location:"Denville, NJ", address:'3109 NJ-10, Denville, NJ 07834', lat:40.8821, lng:-74.4815, price:'$', status:'Visited', date:'', recommended:'', dish:'', website:'', rating:'Good', notes:'', photos:[], favorite:true }
+  ];
+  save();
+}
+
+renderAll();
+</script>
+</body>
+</html>

@@ -1,16 +1,21 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 14
-  Last updated: 2026-02-22
+  Version: 16
+  Last updated: 2026-02-23
 
-  What's new in v13:
-  - Websites filled in for all restaurants that have them
-  - "Who Recommended It?" renamed to "Who Were You With?"
-  - New Occasion field added to form and detail view
+  What's new in v15:
+  - Firebase Firestore integration — restaurants now sync in real time across all devices
+  - Address fields split into Street / City / State / Zip (replaces single address box)
+  - Location/Neighborhood field removed — derived automatically from City + State
+  - Autocomplete search now shows helpful message if network is unavailable
+  - 4-second timeout on geocoding and search fetches to fail fast
 
-  What's new in v14:
-  - "Who Were You With?" placeholder simplified to just "Just us"
-  - Website link moved up to sit alongside Cuisine and Location in detail view
+  What's new in v16:
+  - Removed Razza, Fascino, Porta, Lorena's from sample data
+  - Favorites filter hardened to handle Firestore boolean values
+  - Map now falls back to locations[0] coords if top-level lat/lng is missing
+  - Website moved to its own row in detail view, above the address
+  - renderAll always re-renders favorites and map tabs when visible
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -730,7 +735,7 @@ function renderGrid(list) {
 }
 
 function renderFavorites() {
-  var favs = restaurants.filter(function(r) { return r.favorite; });
+  var favs = restaurants.filter(function(r) { return r.favorite === true || r.favorite === 'true'; });
   var container = document.getElementById('fav-container');
   if (favs.length === 0) {
     container.innerHTML = '<div class="empty-state"><div class="big-icon">❤️</div><h3>No favorites yet</h3><p>Open any restaurant and tap 🤍 to add it here!</p></div>';
@@ -773,7 +778,18 @@ function renderMap() {
       '<div class="map-item-sub">' + [r.cuisine, r.location, r.price].filter(Boolean).join(' · ') + '</div></div></div>';
   }).join('');
 
-  var withCoords = list.filter(function(r) { return r.lat && r.lng; });
+  var withCoords = list.filter(function(r) {
+    if (r.lat && r.lng) return true;
+    // Check first location entry for coords
+    return r.locations && r.locations[0] && r.locations[0].lat && r.locations[0].lng;
+  });
+  // Ensure top-level lat/lng is populated from locations if missing
+  withCoords.forEach(function(r) {
+    if (!r.lat && r.locations && r.locations[0]) {
+      r.lat = r.locations[0].lat;
+      r.lng = r.locations[0].lng;
+    }
+  });
   var container = document.getElementById('map-container');
 
   if (withCoords.length === 0) {
@@ -890,7 +906,6 @@ function getLocationFields() {
     var stateEl  = document.getElementById('loc-state-'  + i);
     var zipEl    = document.getElementById('loc-zip-'    + i);
     var nameEl   = document.getElementById('loc-name-'   + i);
-    if (!streetEl && !cityEl) return;
     var street = streetEl ? streetEl.value.trim() : '';
     var city   = cityEl   ? cityEl.value.trim()   : '';
     var state  = stateEl  ? stateEl.value.trim().toUpperCase()  : '';
@@ -1201,8 +1216,9 @@ function openViewModal(id) {
     '<div class="detail-row">' +
       (r.cuisine  ? '<div class="detail-item"><div class="d-label">Cuisine</div><div class="d-value">' + r.cuisine + '</div></div>' : '') +
       (r.location ? '<div class="detail-item"><div class="d-label">Location</div><div class="d-value">' + r.location + '</div></div>' : '') +
-      (r.website  ? '<div class="detail-item"><div class="d-label">Website</div><div class="d-value"><a href="' + r.website + '" target="_blank" style="color:var(--green-mid);font-weight:600;text-decoration:none;">🔗 Visit Site</a></div></div>' : '') +
+      (r.price    ? '' : '') +
     '</div>' +
+    (r.website ? '<div class="detail-row"><div class="detail-item"><div class="d-label">Website</div><div class="d-value"><a href="' + r.website + '" target="_blank" style="color:var(--green-mid);font-weight:600;text-decoration:none;">🔗 Visit Site</a></div></div></div>' : '') +
     (r.address ? '<div class="detail-row"><div class="detail-item"><div class="d-label">Address</div><div class="d-value">' + r.address + '<button class="copy-btn" onclick="copyAddr(\'' + r.address.replace(/'/g, "\\'") + '\')">📋 Copy</button></div></div></div>' : '') +
         '<div class="detail-row">' +
       (r.date      ? '<div class="detail-item"><div class="d-label">Date Visited</div><div class="d-value">' + new Date(r.date + 'T00:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div></div>' : '') +

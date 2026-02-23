@@ -1,6 +1,6 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 17
+  Version: 18
   Last updated: 2026-02-23
 
   What's new in v15:
@@ -21,6 +21,11 @@
   - Full detail view HTML rewritten cleanly to fix website placement
   - Added Firestore sync debug logging to diagnose favorites issue
   - Fixed locationsHtml rendering in detail view
+
+  What's new in v18:
+  - Fixed favorites and map tabs not populating after Firestore sync
+  - Added fbSynced flag so tabs show loading state until cloud data arrives
+  - Firestore callback now re-renders whichever tab is currently active
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -604,27 +609,38 @@ window.addEventListener('load', function() {
     if (!window._fbInit) return;
     clearInterval(fbReady);
     window._fbInit(function(docs) {
-      if (docs.length === 0) return; // Don't overwrite local data with empty cloud
+      if (docs.length === 0) return;
+      fbSynced = true;
       restaurants = docs;
-      // Debug: log favorite status of all restaurants
-      console.log('[T42] Firestore sync:', docs.length, 'restaurants');
-      docs.forEach(function(d){ if(d.favorite) console.log('[T42] Favorite:', d.name, '| favorite:', d.favorite, '| type:', typeof d.favorite); });
       localStorage.setItem('tablefor2', JSON.stringify(restaurants));
       renderAll();
+      // Re-render whichever tab is currently visible
+      if (document.getElementById('fav-view') && document.getElementById('fav-view').style.display !== 'none') renderFavorites();
+      if (document.getElementById('map-view') && document.getElementById('map-view').style.display !== 'none') renderMap();
     });
   }, 100);
 });
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
 // ── VIEWS ─────────────────────────────────────────────────────────────────────
+var fbSynced = false; // becomes true after first Firestore sync
+
 function switchView(view, el) {
   document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
   el.classList.add('active');
   document.getElementById('grid-view').style.display = view === 'grid' ? '' : 'none';
   document.getElementById('fav-view').style.display  = view === 'fav'  ? '' : 'none';
   document.getElementById('map-view').style.display  = view === 'map'  ? '' : 'none';
-  if (view === 'map') renderMap();
-  if (view === 'fav') renderFavorites();
+  if (view === 'fav') {
+    if (!fbSynced) {
+      document.getElementById('fav-container').innerHTML = '<div class="empty-state"><div class="big-icon">⏳</div><h3>Loading…</h3><p>Syncing with the cloud, just a moment!</p></div>';
+    } else { renderFavorites(); }
+  }
+  if (view === 'map') {
+    if (!fbSynced) {
+      document.getElementById('map-container').innerHTML = '<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-light);gap:0.5rem;"><div style="font-size:2.5rem">⏳</div><div style="font-weight:500;color:var(--text-mid);">Syncing with the cloud…</div></div>';
+    } else { renderMap(); }
+  }
 }
 
 // ── FILTERS + SORT ────────────────────────────────────────────────────────────

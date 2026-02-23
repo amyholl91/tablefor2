@@ -1,6 +1,6 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 20
+  Version: 21
   Last updated: 2026-02-23
 
   What's new in v15:
@@ -34,6 +34,10 @@
 
   What's new in v20:
   - Favorites and Map tabs re-render after 2s delay to catch late Firestore sync
+
+  What's new in v21:
+  - Replaced ES module Firebase with compat SDK (fixes silent failure on GitHub Pages)
+  - Firebase now loads as regular script tags, much more reliable
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -260,12 +264,10 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
   .multi-loc-badge { display: inline-block; background: var(--green-pale); color: var(--green-mid); font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 10px; margin-left: 0.4rem; vertical-align: middle; }
 
 </style>
-  <!-- Firebase -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, setDoc, deleteDoc, doc, onSnapshot }
-      from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
+  <!-- Firebase compat SDKs (simpler, more reliable than ES modules) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDoApfCmA_jDfIFXnA78x2fz3cdDwV526c",
       authDomain: "book-tracker-ah91.firebaseapp.com",
@@ -276,26 +278,28 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
       measurementId: "G-HL8DBNDPB4"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db  = getFirestore(app);
-    const COL = 'restaurants';
+    firebase.initializeApp(firebaseConfig);
+    var db  = firebase.firestore();
+    var COL = 'restaurants';
 
-    // Expose helpers to the global scope so the main script can call them
-    window._fbSave = async function(r) {
-      try { await setDoc(doc(db, COL, r.id), r); } catch(e) { console.warn('FB save failed', e); }
+    window._fbSave = function(r) {
+      db.collection(COL).doc(r.id).set(r)
+        .catch(function(e){ console.warn('FB save failed', e); });
     };
-    window._fbDelete = async function(id) {
-      try { await deleteDoc(doc(db, COL, id)); } catch(e) { console.warn('FB delete failed', e); }
+    window._fbDelete = function(id) {
+      db.collection(COL).doc(id).delete()
+        .catch(function(e){ console.warn('FB delete failed', e); });
     };
     window._fbInit = function(onData) {
-      // Real-time listener — fires immediately with current data, then on every change
-      onSnapshot(collection(db, COL), function(snap) {
+      console.log('[T42] Firebase connecting...');
+      db.collection(COL).onSnapshot(function(snap) {
         var docs = [];
         snap.forEach(function(d){ docs.push(d.data()); });
+        console.log('[T42] Firestore sync:', docs.length, 'restaurants');
+        docs.forEach(function(d){ if(d.favorite) console.log('[T42] Favorite:', d.name, d.favorite); });
         onData(docs);
       }, function(err) {
-        console.warn('Firestore listener error', err);
-        // Fall back to localStorage data already loaded
+        console.warn('[T42] Firestore error:', err);
       });
     };
   </script>

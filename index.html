@@ -237,6 +237,45 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
   .multi-loc-badge { display: inline-block; background: var(--green-pale); color: var(--green-mid); font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 10px; margin-left: 0.4rem; vertical-align: middle; }
 
 </style>
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, setDoc, deleteDoc, doc, onSnapshot }
+      from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDoApfCmA_jDfIFXnA78x2fz3cdDwV526c",
+      authDomain: "book-tracker-ah91.firebaseapp.com",
+      projectId: "book-tracker-ah91",
+      storageBucket: "book-tracker-ah91.firebasestorage.app",
+      messagingSenderId: "512092212283",
+      appId: "1:512092212283:web:7558c3eb9df4fe7cd4201e",
+      measurementId: "G-HL8DBNDPB4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+    const COL = 'restaurants';
+
+    // Expose helpers to the global scope so the main script can call them
+    window._fbSave = async function(r) {
+      try { await setDoc(doc(db, COL, r.id), r); } catch(e) { console.warn('FB save failed', e); }
+    };
+    window._fbDelete = async function(id) {
+      try { await deleteDoc(doc(db, COL, id)); } catch(e) { console.warn('FB delete failed', e); }
+    };
+    window._fbInit = function(onData) {
+      // Real-time listener — fires immediately with current data, then on every change
+      onSnapshot(collection(db, COL), function(snap) {
+        var docs = [];
+        snap.forEach(function(d){ docs.push(d.data()); });
+        onData(docs);
+      }, function(err) {
+        console.warn('Firestore listener error', err);
+        // Fall back to localStorage data already loaded
+      });
+    };
+  </script>
 </head>
 <body>
 
@@ -531,13 +570,37 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
 
 <script>
 // ── DATA ──────────────────────────────────────────────────────────────────────
+// Load from localStorage immediately (fast, works offline)
 if (localStorage.getItem('tablefor2_v') !== '14') {
   localStorage.removeItem('tablefor2');
   localStorage.setItem('tablefor2_v', '14');
 }
 var restaurants = JSON.parse(localStorage.getItem('tablefor2') || '[]');
 
-function save() { localStorage.setItem('tablefor2', JSON.stringify(restaurants)); }
+// Save to both localStorage and Firestore
+function save() {
+  localStorage.setItem('tablefor2', JSON.stringify(restaurants));
+}
+function saveRestaurantToFirebase(r) {
+  if (window._fbSave) window._fbSave(r);
+}
+function deleteRestaurantFromFirebase(id) {
+  if (window._fbDelete) window._fbDelete(id);
+}
+
+// Connect real-time Firestore listener once Firebase module loads
+window.addEventListener('load', function() {
+  var fbReady = setInterval(function() {
+    if (!window._fbInit) return;
+    clearInterval(fbReady);
+    window._fbInit(function(docs) {
+      if (docs.length === 0) return; // Don't overwrite local data with empty cloud
+      restaurants = docs;
+      localStorage.setItem('tablefor2', JSON.stringify(restaurants));
+      renderAll();
+    });
+  }, 100);
+});
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
 // ── VIEWS ─────────────────────────────────────────────────────────────────────
@@ -1064,6 +1127,7 @@ async function saveRestaurant() {
   }
 
   save();
+  saveRestaurantToFirebase(r);
   closeAddModal();
   renderAll();
   if (selectedStatus === 'Visited' && wasVisited !== 'Visited') launchConfetti();
@@ -1072,6 +1136,7 @@ async function saveRestaurant() {
 function deleteRestaurant() {
   if (!editingId) return;
   if (!confirm('Delete this restaurant?')) return;
+  deleteRestaurantFromFirebase(editingId);
   restaurants = restaurants.filter(function(r){ return r.id !== editingId; });
   save(); closeAddModal(); renderAll();
 }
@@ -1165,6 +1230,7 @@ function quickFav(id) {
   if (!r || r.status !== 'Visited') return;
   r.favorite = !r.favorite;
   save();
+  saveRestaurantToFirebase(r);
   renderAll();
 }
 
@@ -1172,7 +1238,7 @@ function toggleFavDirect(id) {
   var r = restaurants.find(function(x){ return x.id === id; });
   if (!r || r.status !== 'Visited') return;
   r.favorite = !r.favorite;
-  save(); renderAll(); openViewModal(id);
+  save(); saveRestaurantToFirebase(r); renderAll(); openViewModal(id);
 }
 
 function copyAddr(addr) {
@@ -1445,6 +1511,8 @@ if (restaurants.length === 0) {
     { id:'manual012x', _added:1771777701012, name:'Hunan Taste', cuisine:'Chinese', location:"Denville, NJ", address:'3109 NJ-10, Denville, NJ 07834', lat:40.8821, lng:-74.4815, price:'$', status:'Visited', date:'', recommended:'', dish:'', website:'', rating:'Good', notes:'', photos:[], favorite:true }
   ];
   save();
+  // Push sample data to Firestore too
+  restaurants.forEach(function(r){ saveRestaurantToFirebase(r); });
 }
 
 renderAll();

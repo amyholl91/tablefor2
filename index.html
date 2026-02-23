@@ -1,6 +1,6 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 16
+  Version: 17
   Last updated: 2026-02-23
 
   What's new in v15:
@@ -16,6 +16,11 @@
   - Map now falls back to locations[0] coords if top-level lat/lng is missing
   - Website moved to its own row in detail view, above the address
   - renderAll always re-renders favorites and map tabs when visible
+
+  What's new in v17:
+  - Full detail view HTML rewritten cleanly to fix website placement
+  - Added Firestore sync debug logging to diagnose favorites issue
+  - Fixed locationsHtml rendering in detail view
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -601,6 +606,9 @@ window.addEventListener('load', function() {
     window._fbInit(function(docs) {
       if (docs.length === 0) return; // Don't overwrite local data with empty cloud
       restaurants = docs;
+      // Debug: log favorite status of all restaurants
+      console.log('[T42] Firestore sync:', docs.length, 'restaurants');
+      docs.forEach(function(d){ if(d.favorite) console.log('[T42] Favorite:', d.name, '| favorite:', d.favorite, '| type:', typeof d.favorite); });
       localStorage.setItem('tablefor2', JSON.stringify(restaurants));
       renderAll();
     });
@@ -1216,17 +1224,17 @@ function openViewModal(id) {
     '<div class="detail-row">' +
       (r.cuisine  ? '<div class="detail-item"><div class="d-label">Cuisine</div><div class="d-value">' + r.cuisine + '</div></div>' : '') +
       (r.location ? '<div class="detail-item"><div class="d-label">Location</div><div class="d-value">' + r.location + '</div></div>' : '') +
-      (r.price    ? '' : '') +
     '</div>' +
-    (r.website ? '<div class="detail-row"><div class="detail-item"><div class="d-label">Website</div><div class="d-value"><a href="' + r.website + '" target="_blank" style="color:var(--green-mid);font-weight:600;text-decoration:none;">🔗 Visit Site</a></div></div></div>' : '') +
-    (r.address ? '<div class="detail-row"><div class="detail-item"><div class="d-label">Address</div><div class="d-value">' + r.address + '<button class="copy-btn" onclick="copyAddr(\'' + r.address.replace(/'/g, "\\'") + '\')">📋 Copy</button></div></div></div>' : '') +
-        '<div class="detail-row">' +
-      (r.date      ? '<div class="detail-item"><div class="d-label">Date Visited</div><div class="d-value">' + new Date(r.date + 'T00:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div></div>' : '') +
-      (r.recommended ? '<div class="detail-item"><div class="d-label">Who We Were With</div><div class="d-value">' + (r.companions || r.recommended || '') + '</div></div>' : '') +
-      (r.occasion ? '<div class=\"detail-item\"><div class=\"d-label\">Occasion</div><div class=\"d-value\">' + r.occasion + '</div></div>' : '') +
+    (r.website ? '<div class="detail-row"><div class="detail-item" style="width:100%"><div class="d-label">Website</div><div class="d-value"><a href="' + r.website + '" target="_blank" style="color:var(--green-mid);font-weight:600;text-decoration:none;">🔗 Visit Site</a></div></div></div>' : '') +
+    (locationsHtml ? locationsHtml : (r.address ? '<div class="detail-row"><div class="detail-item"><div class="d-label">Address</div><div class="d-value">' + r.address + '<button class="copy-btn" onclick="copyAddr(\'' + r.address.replace(/'/g, "\\'") + '\')">📋 Copy</button></div></div></div>' : '')) +
+    '<div class="detail-row">' +
+      (r.date ? '<div class="detail-item"><div class="d-label">Date Visited</div><div class="d-value">' + new Date(r.date + 'T00:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div></div>' : '') +
+      ((r.companions || r.recommended) ? '<div class="detail-item"><div class="d-label">Who We Were With</div><div class="d-value">' + (r.companions || r.recommended || '') + '</div></div>' : '') +
+      (r.occasion ? '<div class="detail-item"><div class="d-label">Occasion</div><div class="d-value">' + r.occasion + '</div></div>' : '') +
     '</div>' +
     (r.dish  ? '<div class="detail-row"><div class="detail-item"><div class="d-label">Favorite Dish</div><div class="d-value">' + r.dish + '</div></div></div>' : '') +
     (r.notes ? '<div class="detail-notes"><strong style="font-size:0.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-light);">Notes</strong><p style="margin-top:0.3rem">' + r.notes + '</p></div>' : '');
+
 
   document.getElementById('view-body').innerHTML = html;
   document.getElementById('view-modal').classList.add('open');

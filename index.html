@@ -693,7 +693,8 @@ function renderAll() {
   updateFilterOptions();
   updateStats();
   renderGrid(getFiltered());
-  if (document.getElementById('fav-view').style.display !== 'none') renderFavorites();
+  renderFavorites();
+  if (document.getElementById('map-view').style.display !== 'none') renderMap();
 }
 
 function makeCard(r) {
@@ -1081,7 +1082,8 @@ async function saveRestaurant() {
   for (var li = 0; li < locs.length; li++) {
     if (!locs[li].lat && locs[li].address) {
       try {
-        var gRes = await fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(locs[li].address) + '&limit=1');
+        var gCtrl = new AbortController(); var gTout = setTimeout(function(){ gCtrl.abort(); }, 4000);
+        var gRes = await fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(locs[li].address) + '&limit=1', { signal: gCtrl.signal }); clearTimeout(gTout);
         var gData = await gRes.json();
         var gCoords = gData.features && gData.features[0] && gData.features[0].geometry && gData.features[0].geometry.coordinates;
         if (gCoords) { locs[li].lng = gCoords[0]; locs[li].lat = gCoords[1]; }

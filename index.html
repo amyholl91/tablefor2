@@ -1,6 +1,6 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 19
+  Version: 20
   Last updated: 2026-02-23
 
   What's new in v15:
@@ -31,6 +31,9 @@
   - Fixed root cause of blank Favorites and Map tabs
   - fav-view and map-view now correctly start hidden in HTML
   - renderAll always renders all tabs so Firestore sync populates everything
+
+  What's new in v20:
+  - Favorites and Map tabs re-render after 2s delay to catch late Firestore sync
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -630,8 +633,8 @@ function switchView(view, el) {
   document.getElementById('grid-view').style.display = view === 'grid' ? '' : 'none';
   document.getElementById('fav-view').style.display  = view === 'fav'  ? '' : 'none';
   document.getElementById('map-view').style.display  = view === 'map'  ? '' : 'none';
-  if (view === 'fav') renderFavorites();
-  if (view === 'map') renderMap();
+  if (view === 'fav') { renderFavorites(); setTimeout(renderFavorites, 2000); }
+  if (view === 'map') { renderMap(); setTimeout(renderMap, 2000); }
 }
 
 // ── FILTERS + SORT ────────────────────────────────────────────────────────────

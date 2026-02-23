@@ -1,6 +1,6 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 21
+  Version: 22
   Last updated: 2026-02-23
 
   What's new in v15:
@@ -38,6 +38,11 @@
   What's new in v21:
   - Replaced ES module Firebase with compat SDK (fixes silent failure on GitHub Pages)
   - Firebase now loads as regular script tags, much more reliable
+
+  What's new in v22:
+  - Fixed root cause of blank Favorites and Map tabs
+  - CSS rule was overriding inline display style — removed conflicting CSS
+  - switchView now explicitly sets display:block instead of empty string
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -148,7 +153,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
 .empty-state h3 { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--text-mid); margin-bottom: 0.5rem; }
 
 /* MAP VIEW */
-#map-view, #fav-view { display: none; }
+/* #map-view and #fav-view start hidden via inline style, toggled by switchView */
 #map-container { border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); height: 500px; background: var(--green-wash); }
 #map-container iframe { width: 100%; height: 100%; border: none; border-radius: 14px; }
 .map-legend { background: var(--white); border-radius: 12px; padding: 1rem 1.25rem; box-shadow: var(--shadow); margin-top: 1rem; display: flex; gap: 1.5rem; align-items: center; }
@@ -634,9 +639,9 @@ function genId() { return Date.now().toString(36) + Math.random().toString(36).s
 function switchView(view, el) {
   document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
   el.classList.add('active');
-  document.getElementById('grid-view').style.display = view === 'grid' ? '' : 'none';
-  document.getElementById('fav-view').style.display  = view === 'fav'  ? '' : 'none';
-  document.getElementById('map-view').style.display  = view === 'map'  ? '' : 'none';
+  document.getElementById('grid-view').style.display = view === 'grid' ? 'block' : 'none';
+  document.getElementById('fav-view').style.display  = view === 'fav'  ? 'block' : 'none';
+  document.getElementById('map-view').style.display  = view === 'map'  ? 'block' : 'none';
   if (view === 'fav') { renderFavorites(); setTimeout(renderFavorites, 2000); }
   if (view === 'map') { renderMap(); setTimeout(renderMap, 2000); }
 }

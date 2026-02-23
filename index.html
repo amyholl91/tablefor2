@@ -1,6 +1,6 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 22
+  Version: 23
   Last updated: 2026-02-23
 
   What's new in v15:
@@ -43,6 +43,10 @@
   - Fixed root cause of blank Favorites and Map tabs
   - CSS rule was overriding inline display style — removed conflicting CSS
   - switchView now explicitly sets display:block instead of empty string
+
+  What's new in v23:
+  - Autocomplete now appends city+state to search query if already filled in
+  - Greatly improves Nominatim results for restaurant name lookup
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -1420,7 +1424,12 @@ function onNameInput(val) {
   var dd = document.getElementById('ac-dropdown');
   dd.style.display = 'block';
   dd.innerHTML = '<div class="ac-loading">🔍 Searching…</div>';
-  acTimeout = setTimeout(function(){ searchPlaces(val); }, 350);
+  // Append city+state to query if already filled in — improves Nominatim results
+  var city  = document.getElementById('loc-city-0')  ? document.getElementById('loc-city-0').value.trim()  : '';
+  var state = document.getElementById('loc-state-0') ? document.getElementById('loc-state-0').value.trim() : '';
+  var location = [city, state].filter(Boolean).join(' ');
+  var query = location ? (val + ' ' + location) : val;
+  acTimeout = setTimeout(function(){ searchPlaces(query, val); }, 350);
 }
 
 function hideAC() {
@@ -1429,14 +1438,15 @@ function hideAC() {
   acItems = [];
 }
 
-async function searchPlaces(query) {
+async function searchPlaces(query, displayQuery) {
+  displayQuery = displayQuery || query;
   try {
     var controller = new AbortController();
     var timeout = setTimeout(function(){ controller.abort(); }, 4000);
     var res  = await fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(query) + '&limit=8&lang=en', { signal: controller.signal });
     clearTimeout(timeout);
     var data = await res.json();
-    renderAC(data.features || [], query);
+    renderAC(data.features || [], displayQuery);
   } catch(e) {
     var dd = document.getElementById('ac-dropdown');
     dd.style.display = 'block';

@@ -1,16 +1,16 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 27
+  Version: 29
   Last updated: 2026-02-24
 
-  What's new in v26:
-  - Fixed edit modal not opening (stale f-date reference after visits redesign)
+  What's new in v28:
+  - Visit row inputs now full-width and properly labeled
 
-  What's new in v27:
-  - Who Were You With and Occasion moved into each visit row
-  - Visit rows now styled as cards with date, who, and occasion fields
-  - Add a visit button styled to match rest of form
-  - Old single-date data migrates who/occasion into first visit automatically
+  What's new in v29:
+  - Visits moved out of add/edit form into their own popup modal
+  - Log a Visit button appears on detail card (Visited restaurants only)
+  - Visits show as a clean list in detail view with date, who, occasion
+  - Each visit has an X button to delete it individually
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -113,10 +113,14 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
 .card-visited-date { font-size: 0.72rem; color: var(--text-light); margin-top: 0.25rem; }
 .card-visit-count { font-size: 0.72rem; color: var(--green-mid); font-weight: 600; margin-top: 0.1rem; }
 .visits-list { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.4rem; }
-.visit-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 0.5rem; align-items: center; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.75rem; }
-.visit-row input { width: 100%; box-sizing: border-box; }
-.visit-row .remove-visit-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: var(--text-light); padding: 0 4px; flex-shrink: 0; line-height: 1; }
+.visit-row { display: flex; flex-direction: column; gap: 0.5rem; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem; position: relative; }
+.visit-row-header { display: flex; gap: 0.5rem; align-items: center; }
+.visit-row-header input[type="date"] { flex: 1; }
+.visit-row .remove-visit-btn { background: none; border: none; cursor: pointer; font-size: 1rem; color: var(--text-light); padding: 2px 6px; flex-shrink: 0; line-height: 1; }
 .visit-row .remove-visit-btn:hover { color: #c62828; }
+.visit-row-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.visit-row-fields input { width: 100%; box-sizing: border-box; }
+.visit-field-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-light); margin-bottom: 0.15rem; }
 .add-visit-btn { margin-top: 0.5rem; background: none; border: 1px dashed var(--border); border-radius: 8px; padding: 0.65rem 0.8rem; font-size: 0.875rem; color: var(--green-mid); cursor: pointer; width: 100%; font-family: inherit; }
 .add-visit-btn:hover { background: var(--green-pale); }
 .card-notes { font-size: 0.83rem; color: var(--text-mid); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 0.35rem; }
@@ -428,10 +432,9 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
         </div>
       </div>
       <div class="form-row">
-        <div class="form-group" id="visits-form-group" style="flex:1 1 100%">
-          <label>Visit Dates</label>
-          <div class="visits-list" id="visits-list"></div>
-          <button type="button" class="add-visit-btn" onclick="addVisitRow()">+ Add a visit</button>
+        <div class="form-group">
+          <label>Date of First Visit</label>
+          <input type="date" id="f-date">
         </div>
 
       </div>
@@ -484,7 +487,36 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
     <div class="modal-footer">
       <button class="btn btn-danger" onclick="deleteFromView()">🗑 Delete</button>
       <button class="btn btn-cancel" onclick="editFromView()">✏️ Edit</button>
+      <button class="btn btn-save" id="btn-log-visit" onclick="openVisitModal()" style="display:none;">📅 Log a Visit</button>
       <button class="btn" id="view-fav-btn" onclick="toggleFavDirect(viewingId)" style="margin-right:auto;order:-1;font-size:1.1rem;padding:0.5rem 0.85rem;background:var(--green-wash);border:1.5px solid var(--border);">🤍</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD VISIT MODAL -->
+<div class="modal-overlay" id="visit-modal" style="display:none">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title">📅 Log a Visit</div>
+      <button class="modal-close" onclick="closeVisitModal()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:1rem;">
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="visit-date">
+      </div>
+      <div class="form-group">
+        <label>Who Were You With?</label>
+        <input type="text" id="visit-who" placeholder="Just us">
+      </div>
+      <div class="form-group">
+        <label>Occasion</label>
+        <input type="text" id="visit-occasion" placeholder="Date night, anniversary, birthday…">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel" onclick="closeVisitModal()">Cancel</button>
+      <button class="btn btn-save" onclick="saveVisit()">Save Visit</button>
     </div>
   </div>
 </div>
@@ -603,15 +635,52 @@ window.addEventListener('load', function() {
     });
   }, 100);
 });
+function removeVisitRow(btn){var p=btn;while(p&&!p.classList.contains('visit-row')){p=p.parentElement;}if(p)p.remove();}
+
 function addVisitRow(date, note, who, occasion) {
   var list = document.getElementById('visits-list');
   var row = document.createElement('div');
   row.className = 'visit-row';
-  row.innerHTML =
-    '<input type="date" value="' + (date || '') + '" title="Date">' +
-    '<input type="text" placeholder="Who were you with?" value="' + (who || '') + '" title="Who">' +
-    '<input type="text" placeholder="Occasion (e.g. anniversary)" value="' + (occasion || '') + '" title="Occasion">' +
-    '<button type="button" class="remove-visit-btn" onclick="this.parentElement.remove()" title="Remove">✕</button>';
+  // Build fields row
+  var headerDiv = document.createElement('div');
+  headerDiv.className = 'visit-row-header';
+  var dateInput = document.createElement('input');
+  dateInput.type = 'date';
+  dateInput.value = date || '';
+  var removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'remove-visit-btn';
+  removeBtn.textContent = '✕ Remove';
+  removeBtn.title = 'Remove this visit';
+  removeBtn.onclick = function(){ removeVisitRow(this); };
+  headerDiv.appendChild(dateInput);
+  headerDiv.appendChild(removeBtn);
+  var fieldsDiv = document.createElement('div');
+  fieldsDiv.className = 'visit-row-fields';
+  var whoWrap = document.createElement('div');
+  var whoLabel = document.createElement('div');
+  whoLabel.className = 'visit-field-label';
+  whoLabel.textContent = 'Who were you with?';
+  var whoInput = document.createElement('input');
+  whoInput.type = 'text';
+  whoInput.placeholder = 'Just us';
+  whoInput.value = who || '';
+  whoWrap.appendChild(whoLabel);
+  whoWrap.appendChild(whoInput);
+  var occWrap = document.createElement('div');
+  var occLabel = document.createElement('div');
+  occLabel.className = 'visit-field-label';
+  occLabel.textContent = 'Occasion';
+  var occInput = document.createElement('input');
+  occInput.type = 'text';
+  occInput.placeholder = 'Date night, anniversary…';
+  occInput.value = occasion || '';
+  occWrap.appendChild(occLabel);
+  occWrap.appendChild(occInput);
+  fieldsDiv.appendChild(whoWrap);
+  fieldsDiv.appendChild(occWrap);
+  row.appendChild(headerDiv);
+  row.appendChild(fieldsDiv);
   list.appendChild(row);
 }
 
@@ -619,10 +688,10 @@ function getVisits() {
   var rows = document.querySelectorAll('#visits-list .visit-row');
   var visits = [];
   rows.forEach(function(row) {
-    var inputs = row.querySelectorAll('input[type="text"]');
+    var fields = row.querySelectorAll('.visit-row-fields input');
     var d   = row.querySelector('input[type="date"]').value;
-    var who = inputs[0] ? inputs[0].value.trim() : '';
-    var occ = inputs[1] ? inputs[1].value.trim() : '';
+    var who = fields[0] ? fields[0].value.trim() : '';
+    var occ = fields[1] ? fields[1].value.trim() : '';
     if (d) visits.push({ date: d, who: who, occasion: occ });
   });
   visits.sort(function(a, b) { return b.date.localeCompare(a.date); });
@@ -987,7 +1056,7 @@ function openAddModal(id) {
   document.getElementById('add-modal-title').textContent = id ? 'Edit Restaurant' : 'Add Restaurant';
   document.getElementById('btn-delete').style.display = id ? '' : 'none';
 
-  var fields = ['f-name','f-cuisine','f-dish','f-notes','f-website'];
+  var fields = ['f-name','f-cuisine','f-date','f-dish','f-notes','f-website'];
   // Also clear f-location if it still exists
   var fLoc = document.getElementById('f-location'); if (fLoc) fLoc.value = '';
   fields.forEach(function(fid) { document.getElementById(fid).value = ''; });
@@ -1014,7 +1083,7 @@ function openAddModal(id) {
     if (r) {
       document.getElementById('f-name').value      = r.name || '';
       document.getElementById('f-cuisine').value   = r.cuisine || '';
-      populateVisits(r.visits && r.visits.length ? r.visits : (r.date ? [{date: r.date, note: '', who: r.companions || r.recommended || '', occasion: r.occasion || ''}] : []));
+      document.getElementById('f-date').value = (r.visits && r.visits.length ? r.visits[0].date : r.date) || '';
       document.getElementById('f-dish').value      = r.dish || '';
       document.getElementById('f-notes').value     = r.notes || '';
       document.getElementById('f-website').value   = r.website || '';
@@ -1158,8 +1227,18 @@ async function saveRestaurant() {
     locations:   locs,
     price:       document.getElementById('f-price').value,
     status:      selectedStatus,
-    visits:      (function(){ var v = getVisits(); return v; })(),
-    date:        (function(){ var v = getVisits(); return v.length ? v[0].date : ''; })(),
+    visits:      (function(){
+      var existing = (function(){ var r2 = restaurants.find(function(x){return x.id===editingId;}); return r2&&r2.visits?r2.visits:[]; })();
+      var fd = document.getElementById('f-date').value;
+      if (existing.length) return existing;
+      return fd ? [{date:fd, who:'', occasion:''}] : [];
+    })(),
+    date:        (function(){
+      var r2 = restaurants.find(function(x){return x.id===editingId;});
+      var existing = r2&&r2.visits&&r2.visits.length?r2.visits:[];
+      var fd = document.getElementById('f-date').value;
+      return existing.length ? existing[0].date : fd;
+    })(),
     recommended: (function(){ var v=getVisits(); return v.length?v[0].who:''; })(), companions: (function(){ var v=getVisits(); return v.length?v[0].who:''; })(), occasion: (function(){ var v=getVisits(); return v.length?v[0].occasion:''; })(),
     dish:        document.getElementById('f-dish').value.trim(),
     website:     document.getElementById('f-website').value.trim(),
@@ -1200,6 +1279,8 @@ function openViewModal(id) {
 
   var titleEl = document.getElementById('view-title');
   titleEl.textContent = r.name;
+  var logBtn = document.getElementById('btn-log-visit');
+  if (logBtn) logBtn.style.display = (r.status === 'Visited') ? '' : 'none';
 
   // Set footer heart
   var favBtn = document.getElementById('view-fav-btn');
@@ -1272,6 +1353,54 @@ function openViewModal(id) {
 }
 
 function closeViewModal() { document.getElementById('view-modal').classList.remove('open'); }
+
+function openVisitModal() {
+  var today = new Date().toISOString().split('T')[0];
+  document.getElementById('visit-date').value = today;
+  document.getElementById('visit-who').value = '';
+  document.getElementById('visit-occasion').value = '';
+  document.getElementById('visit-modal').style.display = 'flex';
+}
+
+function closeVisitModal() {
+  document.getElementById('visit-modal').style.display = 'none';
+}
+
+function saveVisit() {
+  var date = document.getElementById('visit-date').value;
+  if (!date) { alert('Please pick a date!'); return; }
+  var who = document.getElementById('visit-who').value.trim();
+  var occasion = document.getElementById('visit-occasion').value.trim();
+  var r = restaurants.find(function(x){ return x.id === viewingId; });
+  if (!r) return;
+  if (!r.visits) r.visits = r.date ? [{date: r.date, who: r.companions||r.recommended||'', occasion: r.occasion||''}] : [];
+  r.visits.push({date: date, who: who, occasion: occasion});
+  r.visits.sort(function(a,b){ return b.date.localeCompare(a.date); });
+  r.date = r.visits[0].date;
+  r.recommended = r.visits[0].who;
+  r.companions = r.visits[0].who;
+  r.occasion = r.visits[0].occasion;
+  save();
+  window._fbSave && window._fbSave(r);
+  closeVisitModal();
+  openViewModal(viewingId); // refresh detail view
+  renderAll();
+}
+
+function deleteVisit(restaurantId, visitIndex) {
+  var r = restaurants.find(function(x){ return x.id === restaurantId; });
+  if (!r || !r.visits) return;
+  r.visits.splice(visitIndex, 1);
+  if (r.visits.length) {
+    r.date = r.visits[0].date;
+  } else {
+    r.date = '';
+  }
+  save();
+  window._fbSave && window._fbSave(r);
+  openViewModal(restaurantId);
+  renderAll();
+}
 
 function deleteFromView() {
   if (!viewingId) return;

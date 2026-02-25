@@ -1,31 +1,7 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 23
+  Version: 24
   Last updated: 2026-02-23
-
-  What's new in v15:
-  - Firebase Firestore integration — restaurants now sync in real time across all devices
-  - Address fields split into Street / City / State / Zip (replaces single address box)
-  - Location/Neighborhood field removed — derived automatically from City + State
-  - Autocomplete search now shows helpful message if network is unavailable
-  - 4-second timeout on geocoding and search fetches to fail fast
-
-  What's new in v16:
-  - Removed Razza, Fascino, Porta, Lorena's from sample data
-  - Favorites filter hardened to handle Firestore boolean values
-  - Map now falls back to locations[0] coords if top-level lat/lng is missing
-  - Website moved to its own row in detail view, above the address
-  - renderAll always re-renders favorites and map tabs when visible
-
-  What's new in v17:
-  - Full detail view HTML rewritten cleanly to fix website placement
-  - Added Firestore sync debug logging to diagnose favorites issue
-  - Fixed locationsHtml rendering in detail view
-
-  What's new in v18:
-  - Fixed favorites and map tabs not populating after Firestore sync
-  - Added fbSynced flag so tabs show loading state until cloud data arrives
-  - Firestore callback now re-renders whichever tab is currently active
 
   What's new in v19:
   - Fixed root cause of blank Favorites and Map tabs
@@ -47,6 +23,9 @@
   What's new in v23:
   - Autocomplete now appends city+state to search query if already filled in
   - Greatly improves Nominatim results for restaurant name lookup
+
+  What's new in v24:
+  - Fixed delete from detail view not removing restaurant from Firestore
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -1268,6 +1247,7 @@ function closeViewModal() { document.getElementById('view-modal').classList.remo
 function deleteFromView() {
   if (!viewingId) return;
   if (!confirm('Delete this restaurant?')) return;
+  deleteRestaurantFromFirebase(viewingId);
   restaurants = restaurants.filter(function(r){ return r.id !== viewingId; });
   save(); closeViewModal(); renderAll();
 }

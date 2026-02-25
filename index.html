@@ -1,16 +1,15 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 25
+  Version: 26
   Last updated: 2026-02-24
-
-  What's new in v24:
-  - Fixed delete from detail view not removing restaurant from Firestore
 
   What's new in v25:
   - Multiple visit dates per restaurant (date + optional note each)
   - Card shows most recent date + visit count badge
   - Detail view shows total visits and most recent date
-  - Existing single dates automatically migrated to new format
+
+  What's new in v26:
+  - Fixed edit modal not opening (stale f-date reference after visits redesign)
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -993,7 +992,7 @@ function openAddModal(id) {
   document.getElementById('add-modal-title').textContent = id ? 'Edit Restaurant' : 'Add Restaurant';
   document.getElementById('btn-delete').style.display = id ? '' : 'none';
 
-  var fields = ['f-name','f-cuisine','f-date','f-recommended','f-occasion','f-dish','f-notes','f-website'];
+  var fields = ['f-name','f-cuisine','f-recommended','f-occasion','f-dish','f-notes','f-website'];
   // Also clear f-location if it still exists
   var fLoc = document.getElementById('f-location'); if (fLoc) fLoc.value = '';
   fields.forEach(function(fid) { document.getElementById(fid).value = ''; });

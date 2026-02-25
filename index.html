@@ -1,16 +1,17 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 29
+  Version: 30
   Last updated: 2026-02-24
-
-  What's new in v28:
-  - Visit row inputs now full-width and properly labeled
 
   What's new in v29:
   - Visits moved out of add/edit form into their own popup modal
-  - Log a Visit button appears on detail card (Visited restaurants only)
-  - Visits show as a clean list in detail view with date, who, occasion
-  - Each visit has an X button to delete it individually
+  - Log a Visit button on detail card footer
+
+  What's new in v30:
+  - Log a Visit button shows on ALL restaurants (not just Visited)
+  - Logging a visit automatically marks restaurant as Visited
+  - All visits shown in detail view with most recent tagged Latest
+  - Each visit has X button to delete individually
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -433,7 +434,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Date of First Visit</label>
+          <label>Date Visited</label>
           <input type="date" id="f-date">
         </div>
 
@@ -1280,7 +1281,7 @@ function openViewModal(id) {
   var titleEl = document.getElementById('view-title');
   titleEl.textContent = r.name;
   var logBtn = document.getElementById('btn-log-visit');
-  if (logBtn) logBtn.style.display = (r.status === 'Visited') ? '' : 'none';
+  if (logBtn) logBtn.style.display = '';
 
   // Set footer heart
   var favBtn = document.getElementById('view-fav-btn');
@@ -1334,16 +1335,26 @@ function openViewModal(id) {
     '</div>' +
     (r.website ? '<div class="detail-row"><div class="detail-item" style="width:100%"><div class="d-label">Website</div><div class="d-value"><a href="' + r.website + '" target="_blank" style="color:var(--green-mid);font-weight:600;text-decoration:none;">🔗 Visit Site</a></div></div></div>' : '') +
     (locationsHtml ? locationsHtml : (r.address ? '<div class="detail-row"><div class="detail-item"><div class="d-label">Address</div><div class="d-value">' + r.address + '<button class="copy-btn" onclick="copyAddr(\'' + r.address.replace(/'/g, "\\'") + '\')">📋 Copy</button></div></div></div>' : '')) +
-    '<div class="detail-row">' +
-      (r.date ? '<div class="detail-item"><div class="d-label">Date Visited</div><div class="d-value">' + new Date(r.date + 'T00:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div></div>' : '') +
-      (function(){
-      var dv = (r.visits && r.visits.length) ? r.visits : [];
-      var who = (dv.length && dv[0].who) ? dv[0].who : (r.companions || r.recommended || '');
-      var occ = (dv.length && dv[0].occasion) ? dv[0].occasion : (r.occasion || '');
-      return (who ? '<div class="detail-item"><div class="d-label">Who We Were With</div><div class="d-value">' + who + '</div></div>' : '') +
-             (occ ? '<div class="detail-item"><div class="d-label">Occasion</div><div class="d-value">' + occ + '</div></div>' : '');
+    (function(){
+      var dv = (r.visits && r.visits.length) ? r.visits : (r.date ? [{date:r.date, who:r.companions||r.recommended||'', occasion:r.occasion||''}] : []);
+      if (!dv.length) return '';
+      window._pendingVisitDeletes = window._pendingVisitDeletes || {};
+      window._pendingVisitDeletes[r.id] = dv;
+      var rows = dv.map(function(v, i){
+        var d = new Date(v.date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+        var sub = [v.who, v.occasion].filter(Boolean).join(' · ');
+        var latestTag = i===0 ? ' <span style="font-size:0.72rem;color:var(--green-mid);font-weight:600;">Latest</span>' : '';
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.45rem 0;border-bottom:1px solid var(--border);gap:0.5rem;">' +
+          '<div>' +
+            '<div style="font-weight:500;font-size:0.9rem;">&#128197; ' + d + latestTag + '</div>' +
+            (sub ? '<div style="font-size:0.78rem;color:var(--text-light);margin-top:0.1rem;">' + sub + '</div>' : '') +
+          '</div>' +
+          '<button data-rid="' + r.id + '" data-idx="' + i + '" onclick="deleteVisit(this.dataset.rid,+this.dataset.idx)" style="background:none;border:none;cursor:pointer;color:var(--text-light);font-size:0.85rem;padding:2px 6px;flex-shrink:0;" title="Remove this visit">&#10005;</button>' +
+        '</div>';
+      }).join('');
+      var label = dv.length > 1 ? 'Visits (' + dv.length + ')' : 'Last Visit';
+      return '<div class="detail-row"><div class="detail-item" style="width:100%"><div class="d-label">' + label + '</div><div class="d-value" style="padding:0;display:block;">' + rows + '</div></div></div>';
     })() +
-    '</div>' +
     (r.dish  ? '<div class="detail-row"><div class="detail-item"><div class="d-label">Favorite Dish</div><div class="d-value">' + r.dish + '</div></div></div>' : '') +
     (r.notes ? '<div class="detail-notes"><strong style="font-size:0.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-light);">Notes</strong><p style="margin-top:0.3rem">' + r.notes + '</p></div>' : '');
 
@@ -1377,6 +1388,7 @@ function saveVisit() {
   r.visits.push({date: date, who: who, occasion: occasion});
   r.visits.sort(function(a,b){ return b.date.localeCompare(a.date); });
   r.date = r.visits[0].date;
+  r.status = 'Visited';
   r.recommended = r.visits[0].who;
   r.companions = r.visits[0].who;
   r.occasion = r.visits[0].occasion;

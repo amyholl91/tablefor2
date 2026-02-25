@@ -3,23 +3,6 @@
   Version: 24
   Last updated: 2026-02-23
 
-  What's new in v19:
-  - Fixed root cause of blank Favorites and Map tabs
-  - fav-view and map-view now correctly start hidden in HTML
-  - renderAll always renders all tabs so Firestore sync populates everything
-
-  What's new in v20:
-  - Favorites and Map tabs re-render after 2s delay to catch late Firestore sync
-
-  What's new in v21:
-  - Replaced ES module Firebase with compat SDK (fixes silent failure on GitHub Pages)
-  - Firebase now loads as regular script tags, much more reliable
-
-  What's new in v22:
-  - Fixed root cause of blank Favorites and Map tabs
-  - CSS rule was overriding inline display style — removed conflicting CSS
-  - switchView now explicitly sets display:block instead of empty string
-
   What's new in v23:
   - Autocomplete now appends city+state to search query if already filled in
   - Greatly improves Nominatim results for restaurant name lookup

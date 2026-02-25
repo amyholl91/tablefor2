@@ -1,17 +1,17 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 30
+  Version: 31
   Last updated: 2026-02-24
 
-  What's new in v29:
-  - Visits moved out of add/edit form into their own popup modal
-  - Log a Visit button on detail card footer
-
   What's new in v30:
-  - Log a Visit button shows on ALL restaurants (not just Visited)
-  - Logging a visit automatically marks restaurant as Visited
-  - All visits shown in detail view with most recent tagged Latest
-  - Each visit has X button to delete individually
+  - Log a Visit on all restaurants, auto-marks as Visited
+  - Full visit history shown in detail view with Latest tag
+
+  What's new in v31:
+  - Edit pencil button on each visit in detail view
+  - Visit modal pre-fills with existing data when editing
+  - Modal title changes to Edit Visit vs Log a Visit
+  - More spacing between fields in the visit popup
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -498,10 +498,11 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
 <div class="modal-overlay" id="visit-modal" style="display:none">
   <div class="modal" style="max-width:420px;">
     <div class="modal-header">
-      <div class="modal-title">📅 Log a Visit</div>
+      <div class="modal-title" id="visit-modal-title">📅 Log a Visit</div>
       <button class="modal-close" onclick="closeVisitModal()">✕</button>
     </div>
-    <div class="modal-body" style="display:flex;flex-direction:column;gap:1rem;">
+    <input type="hidden" id="visit-edit-index" value="-1">
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:1.4rem;">
       <div class="form-group">
         <label>Date</label>
         <input type="date" id="visit-date">
@@ -1349,7 +1350,10 @@ function openViewModal(id) {
             '<div style="font-weight:500;font-size:0.9rem;">&#128197; ' + d + latestTag + '</div>' +
             (sub ? '<div style="font-size:0.78rem;color:var(--text-light);margin-top:0.1rem;">' + sub + '</div>' : '') +
           '</div>' +
-          '<button data-rid="' + r.id + '" data-idx="' + i + '" onclick="deleteVisit(this.dataset.rid,+this.dataset.idx)" style="background:none;border:none;cursor:pointer;color:var(--text-light);font-size:0.85rem;padding:2px 6px;flex-shrink:0;" title="Remove this visit">&#10005;</button>' +
+          '<div style="display:flex;gap:0.25rem;flex-shrink:0;">' +
+          '<button data-idx="' + i + '" onclick="openVisitModal(+this.dataset.idx)" style="background:none;border:none;cursor:pointer;color:var(--text-light);font-size:0.85rem;padding:2px 6px;" title="Edit this visit">✏️</button>' +
+          '<button data-rid="' + r.id + '" data-idx="' + i + '" onclick="deleteVisit(this.dataset.rid,+this.dataset.idx)" style="background:none;border:none;cursor:pointer;color:var(--text-light);font-size:0.85rem;padding:2px 6px;" title="Remove this visit">&#10005;</button>' +
+          '</div>' +
         '</div>';
       }).join('');
       var label = dv.length > 1 ? 'Visits (' + dv.length + ')' : 'Last Visit';
@@ -1365,11 +1369,23 @@ function openViewModal(id) {
 
 function closeViewModal() { document.getElementById('view-modal').classList.remove('open'); }
 
-function openVisitModal() {
-  var today = new Date().toISOString().split('T')[0];
-  document.getElementById('visit-date').value = today;
-  document.getElementById('visit-who').value = '';
-  document.getElementById('visit-occasion').value = '';
+function openVisitModal(editIndex) {
+  var idx = (editIndex !== undefined) ? editIndex : -1;
+  document.getElementById('visit-edit-index').value = idx;
+  var r = restaurants.find(function(x){ return x.id === viewingId; });
+  if (idx >= 0 && r && r.visits && r.visits[idx]) {
+    var v = r.visits[idx];
+    document.getElementById('visit-date').value = v.date || '';
+    document.getElementById('visit-who').value = v.who || '';
+    document.getElementById('visit-occasion').value = v.occasion || '';
+    document.getElementById('visit-modal-title').textContent = '✏️ Edit Visit';
+  } else {
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('visit-date').value = today;
+    document.getElementById('visit-who').value = '';
+    document.getElementById('visit-occasion').value = '';
+    document.getElementById('visit-modal-title').textContent = '📅 Log a Visit';
+  }
   document.getElementById('visit-modal').style.display = 'flex';
 }
 
@@ -1385,7 +1401,12 @@ function saveVisit() {
   var r = restaurants.find(function(x){ return x.id === viewingId; });
   if (!r) return;
   if (!r.visits) r.visits = r.date ? [{date: r.date, who: r.companions||r.recommended||'', occasion: r.occasion||''}] : [];
-  r.visits.push({date: date, who: who, occasion: occasion});
+  var editIdx = parseInt(document.getElementById('visit-edit-index').value);
+  if (editIdx >= 0 && r.visits[editIdx]) {
+    r.visits[editIdx] = {date: date, who: who, occasion: occasion};
+  } else {
+    r.visits.push({date: date, who: who, occasion: occasion});
+  }
   r.visits.sort(function(a,b){ return b.date.localeCompare(a.date); });
   r.date = r.visits[0].date;
   r.status = 'Visited';

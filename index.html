@@ -1,17 +1,14 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 31
+  Version: 32
   Last updated: 2026-02-24
 
-  What's new in v30:
-  - Log a Visit on all restaurants, auto-marks as Visited
-  - Full visit history shown in detail view with Latest tag
-
   What's new in v31:
-  - Edit pencil button on each visit in detail view
-  - Visit modal pre-fills with existing data when editing
-  - Modal title changes to Edit Visit vs Log a Visit
-  - More spacing between fields in the visit popup
+  - Edit pencil button on each visit, modal pre-fills for editing
+  - More spacing between fields in visit popup
+
+  What's new in v32:
+  - More padding between visit rows in the detail card
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -1345,7 +1342,7 @@ function openViewModal(id) {
         var d = new Date(v.date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
         var sub = [v.who, v.occasion].filter(Boolean).join(' · ');
         var latestTag = i===0 ? ' <span style="font-size:0.72rem;color:var(--green-mid);font-weight:600;">Latest</span>' : '';
-        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.45rem 0;border-bottom:1px solid var(--border);gap:0.5rem;">' +
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;border-bottom:1px solid var(--border);gap:0.5rem;">' +
           '<div>' +
             '<div style="font-weight:500;font-size:0.9rem;">&#128197; ' + d + latestTag + '</div>' +
             (sub ? '<div style="font-size:0.78rem;color:var(--text-light);margin-top:0.1rem;">' + sub + '</div>' : '') +

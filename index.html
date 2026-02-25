@@ -1,14 +1,16 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 24
-  Last updated: 2026-02-23
-
-  What's new in v23:
-  - Autocomplete now appends city+state to search query if already filled in
-  - Greatly improves Nominatim results for restaurant name lookup
+  Version: 25
+  Last updated: 2026-02-24
 
   What's new in v24:
   - Fixed delete from detail view not removing restaurant from Firestore
+
+  What's new in v25:
+  - Multiple visit dates per restaurant (date + optional note each)
+  - Card shows most recent date + visit count badge
+  - Detail view shows total visits and most recent date
+  - Existing single dates automatically migrated to new format
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -109,6 +111,15 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
 .rating-okay     { background: #fff8e1; color: #e65100; }
 .rating-bad      { background: #fce4ec; color: #c62828; }
 .card-visited-date { font-size: 0.72rem; color: var(--text-light); margin-top: 0.25rem; }
+.card-visit-count { font-size: 0.72rem; color: var(--green-mid); font-weight: 600; margin-top: 0.1rem; }
+.visits-list { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.4rem; }
+.visit-row { display: flex; gap: 0.5rem; align-items: center; }
+.visit-row input[type="date"] { flex: 0 0 160px; }
+.visit-row input[type="text"] { flex: 1; }
+.visit-row .remove-visit-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: var(--text-light); padding: 0 4px; flex-shrink: 0; }
+.visit-row .remove-visit-btn:hover { color: #c62828; }
+.add-visit-btn { margin-top: 0.4rem; background: none; border: 1px dashed var(--border); border-radius: 8px; padding: 0.4rem 0.8rem; font-size: 0.82rem; color: var(--green-mid); cursor: pointer; width: 100%; }
+.add-visit-btn:hover { background: var(--green-pale); }
 .card-notes { font-size: 0.83rem; color: var(--text-mid); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 0.35rem; }
 .card-heart-btn { position: absolute; bottom: 10px; right: 12px; background: none; border: none; font-size: 1.25rem; cursor: pointer; padding: 0.25rem; line-height: 1; transition: transform 0.2s; z-index: 2; }
 .card-heart-btn:hover { transform: scale(1.3); }
@@ -393,6 +404,10 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
             <option value="$$$">$$$ Splurge</option>
           </select>
         </div>
+        <div class="form-group">
+          <label>Website / Google Maps Link</label>
+          <input type="url" id="f-website" placeholder="https://…">
+        </div>
       </div>
       <div class="form-group">
         <label>Locations <span style="font-size:0.75rem;color:var(--text-light);text-transform:none;font-weight:400;">(add one or more)</span></label>
@@ -414,9 +429,10 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
         </div>
       </div>
       <div class="form-row">
-        <div class="form-group">
-          <label>Date Visited</label>
-          <input type="date" id="f-date">
+        <div class="form-group" id="visits-form-group" style="flex:1 1 100%">
+          <label>Visit Dates</label>
+          <div class="visits-list" id="visits-list"></div>
+          <button type="button" class="add-visit-btn" onclick="addVisitRow()">+ Add a visit</button>
         </div>
         <div class="form-group">
           <label>Who Were You With?</label>
@@ -431,10 +447,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
         <div class="form-group">
           <label>Favorite Dish Ordered</label>
           <input type="text" id="f-dish" placeholder="e.g. Truffle pasta…">
-        </div>
-        <div class="form-group">
-          <label>Website / Google Maps Link</label>
-          <input type="url" id="f-website" placeholder="https://…">
         </div>
       </div>
       <div class="form-group" id="rating-group">
@@ -599,6 +611,37 @@ window.addEventListener('load', function() {
     });
   }, 100);
 });
+function addVisitRow(date, note) {
+  var list = document.getElementById('visits-list');
+  var row = document.createElement('div');
+  row.className = 'visit-row';
+  row.innerHTML =
+    '<input type="date" value="' + (date || '') + '">' +
+    '<input type="text" placeholder="Note (optional, e.g. takeout, anniversary)" value="' + (note || '') + '">' +
+    '<button type="button" class="remove-visit-btn" onclick="this.parentElement.remove()" title="Remove">✕</button>';
+  list.appendChild(row);
+}
+
+function getVisits() {
+  var rows = document.querySelectorAll('#visits-list .visit-row');
+  var visits = [];
+  rows.forEach(function(row) {
+    var d = row.querySelector('input[type="date"]').value;
+    var n = row.querySelector('input[type="text"]').value.trim();
+    if (d) visits.push({ date: d, note: n });
+  });
+  // Sort newest first
+  visits.sort(function(a, b) { return b.date.localeCompare(a.date); });
+  return visits;
+}
+
+function populateVisits(visits) {
+  document.getElementById('visits-list').innerHTML = '';
+  if (visits && visits.length) {
+    visits.forEach(function(v) { addVisitRow(v.date, v.note); });
+  }
+}
+
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
 // ── VIEWS ─────────────────────────────────────────────────────────────────────
@@ -699,8 +742,12 @@ function makeCard(r) {
   var ratingClass = r.rating === 'Amazing' ? 'rating-amazing' : r.rating === 'Very Good' ? 'rating-verygood' : r.rating === 'Good' ? 'rating-good' : r.rating === 'Okay' ? 'rating-okay' : r.rating === 'Bad' ? 'rating-bad' : '';
   var ratingEmoji = {Amazing:'🤩',['Very Good']:'😍',Good:'👍',Okay:'😐',Bad:'👎'};
   var ratingHtml  = r.rating ? '<span class="card-rating ' + ratingClass + '">' + (ratingEmoji[r.rating]||'') + ' ' + r.rating + '</span>' : '';
-  var visitedHtml = (r.status === 'Visited' && r.date)
-    ? '<div class="card-visited-date">📅 Visited ' + new Date(r.date + 'T00:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) + '</div>' : '';
+  var visits = (r.visits && r.visits.length) ? r.visits : (r.date ? [{date: r.date, note: ''}] : []);
+  var latestDate = visits.length ? new Date(visits[0].date + 'T00:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) : '';
+  visitedHtml = (r.status === 'Visited' && latestDate)
+    ? '<div class="card-visited-date">📅 ' + latestDate + '</div>' +
+      (visits.length > 1 ? '<div class="card-visit-count">🔁 ' + visits.length + ' visits</div>' : '')
+    : '';
   return '<div class="restaurant-card' + (r.favorite ? ' is-favorite' : '') + '" onclick="openViewModal(\'' + r.id + '\')">' +
     '<div class="card-image-placeholder">' + cuisineEmoji(r.cuisine) + '<span>' + (r.cuisine || 'Restaurant') + '</span></div>' +
     '<span class="card-status-badge ' + (r.status === 'Visited' ? 'badge-visited' : 'badge-want') + '">' + r.status + '</span>' +
@@ -973,7 +1020,7 @@ function openAddModal(id) {
     if (r) {
       document.getElementById('f-name').value      = r.name || '';
       document.getElementById('f-cuisine').value   = r.cuisine || '';
-      document.getElementById('f-date').value      = r.date || '';
+      populateVisits(r.visits && r.visits.length ? r.visits : (r.date ? [{date: r.date, note: ''}] : []));
       document.getElementById('f-recommended').value = r.companions || r.recommended || '';
       document.getElementById('f-dish').value      = r.dish || '';
       document.getElementById('f-notes').value     = r.notes || '';
@@ -1118,7 +1165,8 @@ async function saveRestaurant() {
     locations:   locs,
     price:       document.getElementById('f-price').value,
     status:      selectedStatus,
-    date:        document.getElementById('f-date').value,
+    visits:      (function(){ var v = getVisits(); return v; })(),
+    date:        (function(){ var v = getVisits(); return v.length ? v[0].date : ''; })(),
     recommended: document.getElementById('f-recommended').value.trim(), companions: document.getElementById('f-recommended').value.trim(), occasion: document.getElementById('f-occasion').value.trim(),
     dish:        document.getElementById('f-dish').value.trim(),
     website:     document.getElementById('f-website').value.trim(),

@@ -1,14 +1,15 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 32
+  Version: 33
   Last updated: 2026-02-24
-
-  What's new in v31:
-  - Edit pencil button on each visit, modal pre-fills for editing
-  - More spacing between fields in visit popup
 
   What's new in v32:
   - More padding between visit rows in the detail card
+
+  What's new in v33:
+  - Edit form now shows Log a Visit button instead of plain date field
+  - Visit count summary shown in edit form (e.g. 3 visits logged)
+  - Consistent visit experience across edit form and detail view
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -430,11 +431,11 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
         </div>
       </div>
       <div class="form-row">
-        <div class="form-group">
-          <label>Date Visited</label>
-          <input type="date" id="f-date">
+        <div class="form-group" style="flex:1 1 100%">
+          <label>Visits</label>
+          <div id="form-visits-summary" style="font-size:0.85rem;color:var(--text-light);margin-bottom:0.4rem;"></div>
+          <button type="button" onclick="openVisitModal()" style="background:var(--green-wash);border:1.5px solid var(--border);border-radius:10px;padding:0.65rem 1rem;font-size:0.875rem;font-weight:600;color:var(--green-deep);cursor:pointer;font-family:inherit;text-align:left;width:100%;">📅 Log a Visit</button>
         </div>
-
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -1055,7 +1056,7 @@ function openAddModal(id) {
   document.getElementById('add-modal-title').textContent = id ? 'Edit Restaurant' : 'Add Restaurant';
   document.getElementById('btn-delete').style.display = id ? '' : 'none';
 
-  var fields = ['f-name','f-cuisine','f-date','f-dish','f-notes','f-website'];
+  var fields = ['f-name','f-cuisine','f-dish','f-notes','f-website'];
   // Also clear f-location if it still exists
   var fLoc = document.getElementById('f-location'); if (fLoc) fLoc.value = '';
   fields.forEach(function(fid) { document.getElementById(fid).value = ''; });
@@ -1082,7 +1083,11 @@ function openAddModal(id) {
     if (r) {
       document.getElementById('f-name').value      = r.name || '';
       document.getElementById('f-cuisine').value   = r.cuisine || '';
-      document.getElementById('f-date').value = (r.visits && r.visits.length ? r.visits[0].date : r.date) || '';
+      var summary = document.getElementById('form-visits-summary');
+      if (summary) {
+        var dv = r.visits && r.visits.length ? r.visits : (r.date ? [{date:r.date}] : []);
+        summary.textContent = dv.length ? (dv.length === 1 ? '1 visit logged' : dv.length + ' visits logged') : 'No visits yet';
+      }
       document.getElementById('f-dish').value      = r.dish || '';
       document.getElementById('f-notes').value     = r.notes || '';
       document.getElementById('f-website').value   = r.website || '';
@@ -1227,16 +1232,12 @@ async function saveRestaurant() {
     price:       document.getElementById('f-price').value,
     status:      selectedStatus,
     visits:      (function(){
-      var existing = (function(){ var r2 = restaurants.find(function(x){return x.id===editingId;}); return r2&&r2.visits?r2.visits:[]; })();
-      var fd = document.getElementById('f-date').value;
-      if (existing.length) return existing;
-      return fd ? [{date:fd, who:'', occasion:''}] : [];
+      var r2 = restaurants.find(function(x){return x.id===editingId;});
+      return (r2 && r2.visits) ? r2.visits : [];
     })(),
     date:        (function(){
       var r2 = restaurants.find(function(x){return x.id===editingId;});
-      var existing = r2&&r2.visits&&r2.visits.length?r2.visits:[];
-      var fd = document.getElementById('f-date').value;
-      return existing.length ? existing[0].date : fd;
+      return (r2 && r2.visits && r2.visits.length) ? r2.visits[0].date : (r2 ? r2.date||'' : '');
     })(),
     recommended: (function(){ var v=getVisits(); return v.length?v[0].who:''; })(), companions: (function(){ var v=getVisits(); return v.length?v[0].who:''; })(), occasion: (function(){ var v=getVisits(); return v.length?v[0].occasion:''; })(),
     dish:        document.getElementById('f-dish').value.trim(),

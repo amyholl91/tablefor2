@@ -1,15 +1,16 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 35
+  Version: 36
   Last updated: 2026-02-28
 
-  What's new in v34:
-  - New Stats tab with visits by month, cuisine breakdown, most visited
-
   What's new in v35:
-  - New Recently Visited tab showing visited restaurants grouped by time
-  - Groups: This Week, This Month, This Year, Older
-  - Sorted by most recent visit date
+  - New Recently Visited tab grouped by This Week / Month / Year / Older
+
+  What's new in v36:
+  - Bulk Import from notes — paste a list, preview parsed results, confirm import
+  - Parses name, cuisine, city and state from common formats
+  - Skips duplicates automatically
+  - Import button in header
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -308,6 +309,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
   <div class="logo">Table <span>for 2</span></div>
   <div class="header-actions">
     <button class="btn btn-datenight" onclick="openDateNight()">🌹 Date Night</button>
+    <button class="btn btn-cancel" onclick="openImportModal()" style="font-size:0.85rem;">📋 Import</button>
     <button class="btn btn-primary" onclick="openAddModal()">＋ Add Restaurant</button>
   </div>
 </header>
@@ -545,6 +547,38 @@ main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
   </div>
 </div>
 
+<!-- IMPORT MODAL -->
+<div class="modal-overlay" id="import-modal" style="display:none">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <div class="modal-title">📋 Bulk Import Restaurants</div>
+      <button class="modal-close" onclick="closeImportModal()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:1rem;">
+      <p style="font-size:0.875rem;color:var(--text-mid);margin:0;">Paste your list below — one restaurant per line. Include city/state and cuisine if you have them. For example:</p>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:0.75rem;font-size:0.8rem;color:var(--text-light);font-family:monospace;line-height:1.7;">
+        Campiello, Naples FL<br>
+        Shula's - Steakhouse - Naples, FL<br>
+        The Capital Grille<br>
+        Osteria Tulia | Italian | Naples
+      </div>
+      <div class="form-group">
+        <label>Your List</label>
+        <textarea id="import-text" rows="10" placeholder="Paste your restaurant list here..." style="font-family:inherit;font-size:0.875rem;resize:vertical;"></textarea>
+      </div>
+      <div id="import-preview" style="display:none;">
+        <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-light);margin-bottom:0.5rem;">Preview — <span id="import-count"></span></div>
+        <div id="import-preview-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel" onclick="closeImportModal()">Cancel</button>
+      <button class="btn btn-cancel" onclick="previewImport()">Preview</button>
+      <button class="btn btn-save" id="import-confirm-btn" style="display:none;" onclick="confirmImport()">✓ Import All</button>
+    </div>
+  </div>
+</div>
+
 <!-- DATE NIGHT MODAL -->
 <div class="modal-overlay" id="dn-modal">
   <div class="modal" style="max-width:480px;">
@@ -761,6 +795,121 @@ function renderStats() {
       '<div class="stats-section-title">Most Visited</div>' +
       (topBarsHtml ? '<div class="stats-big-card"><div class="chart-bar-wrap">' + topBarsHtml + '</div></div>' : '') +
     '</div>';
+}
+
+// ── BULK IMPORT ──────────────────────────────────────────────────────────────
+var importParsed = [];
+
+function openImportModal() {
+  document.getElementById('import-text').value = '';
+  document.getElementById('import-preview').style.display = 'none';
+  document.getElementById('import-confirm-btn').style.display = 'none';
+  importParsed = [];
+  document.getElementById('import-modal').style.display = 'flex';
+}
+
+function closeImportModal() {
+  document.getElementById('import-modal').style.display = 'none';
+}
+
+function parseImportLine(line) {
+  line = line.trim();
+  if (!line) return null;
+
+  // Split on common separators: comma, dash, pipe, tab
+  var parts = line.split(/\s*[|\-–]\s*|	/).map(function(p){ return p.trim(); }).filter(Boolean);
+  if (!parts.length) return null;
+
+  var name = '', cuisine = '', city = '', state = '';
+
+  // First part is always the name
+  name = parts[0];
+
+  // Try to extract city/state from the name part (e.g. "Campiello, Naples FL")
+  var cityMatch = name.match(/,\s*([A-Za-z\s]+),?\s*([A-Z]{2})$/);
+  if (cityMatch) {
+    city  = cityMatch[1].trim();
+    state = cityMatch[2].trim();
+    name  = name.replace(cityMatch[0], '').trim();
+  }
+
+  // Look through remaining parts for cuisine and location clues
+  var knownCuisines = ['italian','american','japanese','chinese','mexican','french','thai','indian','mediterranean','seafood','steakhouse','pizza','sushi','bbq','greek','spanish','vietnamese','korean','caribbean'];
+  parts.slice(1).forEach(function(p) {
+    var lower = p.toLowerCase();
+    var isCuisine = knownCuisines.some(function(c){ return lower.includes(c); });
+    if (isCuisine && !cuisine) {
+      cuisine = p;
+    } else if (!city) {
+      // Try to extract city/state from this part
+      var m = p.match(/([A-Za-z\s]+),?\s*([A-Z]{2})$/);
+      if (m) { city = m[1].trim(); state = m[2].trim(); }
+      else { city = p; }
+    }
+  });
+
+  return { name: name, cuisine: cuisine, city: city, state: state };
+}
+
+function previewImport() {
+  var text = document.getElementById('import-text').value;
+  var lines = text.split("\n");
+  importParsed = lines.map(parseImportLine).filter(Boolean);
+
+  if (!importParsed.length) {
+    alert('Nothing to import! Make sure each restaurant is on its own line.');
+    return;
+  }
+
+  var previewHtml = importParsed.map(function(r, i) {
+    return '<div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0.75rem;border-bottom:1px solid var(--border);font-size:0.875rem;">' +
+      '<div style="width:22px;height:22px;background:var(--green-mid);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem;font-weight:700;flex-shrink:0;">' + (i+1) + '</div>' +
+      '<div style="flex:1;">' +
+        '<div style="font-weight:600;color:var(--text-dark);">' + r.name + '</div>' +
+        '<div style="color:var(--text-light);font-size:0.78rem;">' + [r.cuisine, r.city && r.state ? r.city+', '+r.state : r.city||r.state].filter(Boolean).join(' · ') + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  document.getElementById('import-count').textContent = importParsed.length + ' restaurant' + (importParsed.length !== 1 ? 's' : '') + ' found';
+  document.getElementById('import-preview-list').innerHTML = previewHtml;
+  document.getElementById('import-preview').style.display = 'block';
+  document.getElementById('import-confirm-btn').style.display = '';
+}
+
+function confirmImport() {
+  if (!importParsed.length) return;
+  var added = 0;
+  importParsed.forEach(function(r) {
+    // Skip duplicates by name (case-insensitive)
+    var exists = restaurants.some(function(ex){ return ex.name.toLowerCase() === r.name.toLowerCase(); });
+    if (exists) return;
+    var loc = [r.city, r.state].filter(Boolean).join(', ');
+    var newR = {
+      id:          genId() + added,
+      _added:      Date.now() + added,
+      name:        r.name,
+      cuisine:     r.cuisine || '',
+      location:    loc,
+      address:     '',
+      lat:         '', lng: '',
+      locations:   [{name: loc, street:'', city: r.city||'', state: r.state||'', zip:'', address: loc, lat:'', lng:''}],
+      price:       '',
+      status:      'Want to Try',
+      date:        '',
+      visits:      [],
+      recommended: '', companions: '', occasion: '',
+      dish:        '', website: '', notes: '',
+      rating:      '', favorite: false, photos: []
+    };
+    restaurants.push(newR);
+    window._fbSave && window._fbSave(newR);
+    added++;
+  });
+  save();
+  renderAll();
+  closeImportModal();
+  alert('✓ Imported ' + added + ' restaurant' + (added !== 1 ? 's' : '') + '!' + (importParsed.length - added > 0 ? ' (' + (importParsed.length - added) + ' skipped as duplicates)' : ''));
 }
 
 function removeVisitRow(btn){var p=btn;while(p&&!p.classList.contains('visit-row')){p=p.parentElement;}if(p)p.remove();}

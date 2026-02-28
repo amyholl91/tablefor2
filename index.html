@@ -1,16 +1,13 @@
 <!--
   Table for 2 — Restaurant Tracker
-  Version: 36
+  Version: 37
   Last updated: 2026-02-28
 
-  What's new in v35:
-  - New Recently Visited tab grouped by This Week / Month / Year / Older
-
   What's new in v36:
-  - Bulk Import from notes — paste a list, preview parsed results, confirm import
-  - Parses name, cuisine, city and state from common formats
-  - Skips duplicates automatically
-  - Import button in header
+  - Bulk Import — paste a list, preview, confirm
+
+  What's new in v37:
+  - Removed all hardcoded sample data — app starts empty
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -2050,24 +2047,7 @@ document.getElementById('add-modal').addEventListener('click', function(e){ if (
 document.getElementById('view-modal').addEventListener('click', function(e){ if (e.target === e.currentTarget) closeViewModal(); });
 document.getElementById('dn-modal').addEventListener('click', function(e){ if (e.target === e.currentTarget) closeDN(); });
 
-// ── SAMPLE DATA ───────────────────────────────────────────────────────────────
-if (restaurants.length === 0) {
-  restaurants = [
-    { id:genId(), _added:2, name:"Ninety Acres", cuisine:"American", location:"Peapack, NJ", address:"2 Main St, Peapack, NJ", lat:40.7151, lng:-74.6593, price:"$$$", status:"Visited", date:"2025-09-05", recommended:"Friend", dish:"Dry-aged beef tenderloin", rating:"Amazing", notes:"On a gorgeous working farm. The ingredients are all grown on-site. Perfect for a special occasion dinner.", website:"https://www.ninetyacres.com", photos:[], favorite:true },
-    { id:genId(), _added:6, name:"Ani Ramen", cuisine:"Ramen", location:"Montclair, NJ", address:"27 Church St, Montclair, NJ", lat:40.8267, lng:-74.2088, price:"$", status:"Visited", date:"2025-11-22", recommended:"Friend", dish:"Spicy miso ramen", rating:"Good", notes:"Really solid ramen, generous portions. The spicy miso broth is rich.", website:"https://www.aniramen.com", photos:[], favorite:false },
-    { id:'manual001', _added:1771777790001, name:"JINYA Ramen Bar", cuisine:"Ramen", location:"Las Vegas, NV", address:"3939 Spring Mountain Rd, Las Vegas, NV 89102", lat:36.1147, lng:-115.1891, price:"$$", status:"Visited", date:'', recommended:'', dish:'', website:"https://www.jinyaramenbar.com", rating:"Very Good", notes:"Great ramen, consistent across locations.", photos:[], favorite:true, locations:[{name:"Flamingo",address:"3939 Spring Mountain Rd, Las Vegas, NV 89102",lat:36.1147,lng:-115.1891,notes:"Near the Flamingo casino"},{name:"Paradise Rd",address:"4480 Paradise Rd, Las Vegas, NV 89169",lat:36.1073,lng:-115.1492,notes:""}] },
-    { id:'manual003', _added:1771777510003, name:"Roots Steakhouse", cuisine:"Steakhouse", location:"Morristown, NJ", address:"20 Washington St, Morristown, NJ 07960", lat:40.7968, lng:-74.4815, price:"$$$", status:'Visited', date:'', recommended:'', dish:'', website:"https://rootssteakhouse.com", rating:"Good", notes:"", photos:[], favorite:false },
-    { id:'manual004', _added:1771777801004, name:"The Capital Grille", cuisine:"Steakhouse", location:"Multiple Locations", address:"120 42nd St, New York, NY 10168", lat:40.7527, lng:-73.9772, price:"$$$", status:"Visited", date:'', recommended:'', dish:'', website:"https://www.thecapitalgrille.com", rating:"Very Good", notes:"", photos:[], favorite:false, locations:[{name:"New York, NY",address:"120 42nd St, New York, NY 10168",lat:40.7527,lng:-73.9772,notes:""},{name:"East Hanover, NJ",address:"240 NJ-10, East Hanover, NJ 07936",lat:40.8165,lng:-74.3629,notes:""}] },
-    { id:'manual006', _added:1771777510006, name:"Casa de Pasta", cuisine:"Italian", location:"Randolph, NJ", address:"1171 Sussex Tpke, Randolph, NJ 07869", lat:40.862, lng:-74.576, price:"$$", status:'Visited', date:'', recommended:'', dish:'', website:"", rating:"Good", notes:"", photos:[], favorite:false }
-,
-    { id:'manual010x', _added:1771777701010, name:'Casa Bella', cuisine:'Italian', location:"Denville, NJ", address:'3195 NJ-10, Denville, NJ 07834', lat:40.8826, lng:-74.481, price:'$$', status:'Visited', date:'', recommended:'', dish:'', website:'https://casabella46.com', rating:'Very Good', notes:'', photos:[], favorite:false },
-    { id:'manual011x', _added:1771777701011, name:'Sogo', cuisine:'Japanese', location:"Denville, NJ", address:'3160 NJ-10, Denville, NJ 07834', lat:40.8824, lng:-74.4812, price:'$$', status:'Visited', date:'', recommended:'', dish:'', website:'', rating:'Very Good', notes:'', photos:[], favorite:true },
-    { id:'manual012x', _added:1771777701012, name:'Hunan Taste', cuisine:'Chinese', location:"Denville, NJ", address:'3109 NJ-10, Denville, NJ 07834', lat:40.8821, lng:-74.4815, price:'$', status:'Visited', date:'', recommended:'', dish:'', website:'', rating:'Good', notes:'', photos:[], favorite:true }
-  ];
-  save();
-  // Push sample data to Firestore too
-  restaurants.forEach(function(r){ saveRestaurantToFirebase(r); });
-}
+// No sample data — app starts empty
 
 renderAll();
 </script>
